@@ -1,0 +1,31 @@
+{
+  "name": "agente-pedidos",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Agente de pedidos para tiendas de barrio: sale a buscar los datos, calcula qué pedirle al vendedor y cuánto, y aprende del dueño.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint .",
+    "dev:api": "npm run dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web",
+    "build": "npm run build --workspaces --if-present",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@eslint/js": "^9.30.0",
+    "eslint": "^9.30.0",
+    "husky": "^9.1.7",
+    "typescript-eslint": "^8.40.0"
+  }
+}

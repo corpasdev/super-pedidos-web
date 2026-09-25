@@ -1,0 +1,32 @@
+const COP_GROUP = new Intl.NumberFormat("es-CO", { maximumFractionDigits: 0 })
+
+export const formatMoney = (pesos: number): string => `$${COP_GROUP.format(pesos)}`
+
+const DATE_FORMAT = new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", weekday: "short" })
+
+export const formatDate = (iso: string): string => DATE_FORMAT.format(new Date(iso))
+
+const WEEKDAY_LABELS = ["", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"] as const
+
+export const weekdayLabel = (weekday: number): string => WEEKDAY_LABELS[weekday] ?? ""
+
+/** Interpola `{param}` de statusExplanation. Los números se formatean como pesos. */
+export const interpolateParams = (template: string, params: Record<string, number | string>): string =>
+  template.replace(/\{(\w+)\}/g, (match, key: string) => {
+    const value = params[key]
+    if (value === undefined) return match
+    return typeof value === "number" ? formatMoney(value) : value
+  })
+
+export const formatSupplyUnits = (units: number): string => `${units.toLocaleString("es-CO")} u`
+
+export const shortId = (id: string): string => id.slice(0, 8)
+
+/** Formato de entrada para n-input-number en pesos: "$25.988". */
+export const moneyFormatter = (value: number | null): string => (value === null ? "" : formatMoney(value))
+
+/** Parser de pesos: ignora símbolos y separadores, deja solo dígitos. */
+export const moneyParser = (input: string): number | null => {
+  const digits = input.replace(/[^\d]/g, "")
+  return digits === "" ? null : Number(digits)
+}

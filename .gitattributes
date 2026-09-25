@@ -1,0 +1,9 @@
+# Fines de línea LF en el repositorio (los hooks de husky y los scripts deben funcionar en Linux/macOS/Windows).
+* text=auto eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.xlsx binary

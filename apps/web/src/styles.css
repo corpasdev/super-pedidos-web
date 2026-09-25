@@ -1,0 +1,132 @@
+@layer base, components, utilities;
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/*
+ * Paleta SuperPedido (patrón de armonía del diseño "Dropify"):
+ * lienzo --brand-deep → contenedor --surface → tarjetas --surface-2 → tiles --surface.
+ * Un solo acento (--accent, lima) para acción primaria, estado activo y valor actual.
+ * Nunca texto lima sobre blanco: el lima es relleno (texto --brand-deep) o trazo sobre oscuro.
+ */
+:root {
+  --brand-deep: #013f32;
+  --brand-deep-2: #1e6b55;
+  --brand-tint: rgba(1, 63, 50, 0.14);
+  --accent: #e7fe25;
+  --accent-contrast: #013f32;
+  --ink: #161616;
+  --ink-contrast: #fdfdfd;
+  --ink-muted: #6e736f;
+  --line: #e4e7e1;
+  --canvas: #013f32;
+  --surface: #fdfdfd;
+  --surface-2: #f1f3ee;
+  /* Dato principal sobre fondo claro. */
+  --data: #013f32;
+
+  /* Escala usada por las vistas existentes (mapeada a la paleta). */
+  --surface-0: var(--surface);
+  --surface-50: #f7f8f5;
+  --surface-100: var(--surface-2);
+  --surface-200: var(--line);
+  --surface-300: #cdd2cb;
+  --surface-400: #9aa09b;
+  --surface-500: var(--ink-muted);
+  --surface-600: #4f5551;
+  --surface-700: #343934;
+  --surface-800: #232623;
+  --surface-900: var(--ink);
+  --surface-border: var(--line);
+  --primary: var(--brand-deep);
+  --primary-contrast: var(--surface);
+  --success: #1e6b55;
+  --danger: #c2410c;
+}
+
+html.dark {
+  --brand-deep: #013f32;
+  --brand-deep-2: #1e6b55;
+  --brand-tint: rgba(143, 217, 182, 0.18);
+  --accent: #e7fe25;
+  --accent-contrast: #013f32;
+  --ink: #eef2ec;
+  --ink-contrast: #0e1b17;
+  --ink-muted: #95a19a;
+  --line: #24352f;
+  --canvas: #06120f;
+  --surface: #0e1b17;
+  --surface-2: #15241f;
+  --data: #8fd9b6;
+
+  --surface-50: #122019;
+  --surface-300: #33463f;
+  --surface-400: #6f7d76;
+  --surface-600: #b3bdb6;
+  --surface-700: #cdd5cf;
+  --surface-800: #e0e6e1;
+  --primary: #8fd9b6;
+  --primary-contrast: #0e1b17;
+  --success: #8fd9b6;
+  --danger: #fb923c;
+}
+
+@theme inline {
+  --color-brand-deep: var(--brand-deep);
+  --color-brand-tint: var(--brand-tint);
+  --color-accent: var(--accent);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-ink: var(--ink);
+  --color-ink-contrast: var(--ink-contrast);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-canvas: var(--canvas);
+  --color-data: var(--data);
+  --color-surface-0: var(--surface-0);
+  --color-surface-50: var(--surface-50);
+  --color-surface-100: var(--surface-100);
+  --color-surface-200: var(--surface-200);
+  --color-surface-300: var(--surface-300);
+  --color-surface-400: var(--surface-400);
+  --color-surface-500: var(--surface-500);
+  --color-surface-600: var(--surface-600);
+  --color-surface-700: var(--surface-700);
+  --color-surface-800: var(--surface-800);
+  --color-surface-900: var(--surface-900);
+  --color-surface: var(--surface-border);
+  --color-primary: var(--primary);
+  --color-primary-contrast: var(--primary-contrast);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --radius-xl-shell: 32px;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  background: var(--canvas);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}

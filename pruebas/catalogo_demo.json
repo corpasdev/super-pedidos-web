@@ -1,0 +1,23 @@
+{
+  "suppliers": {
+    "proveedores": [
+      { "id": 1, "proveedor": "Distribuidora El Progreso S.A.S.", "nit_cc": "900123456-7", "correo": "ventas@elprogreso.com" },
+      { "id": 2, "proveedor": "Alimentos del Campo Ltda", "nit_cc": "890987654-3", "correo": "pedidos@campo.co" },
+      { "id": 3, "proveedor": "Inversiones La Paloma", "nit_cc": "800456123-9", "correo": null }
+    ]
+  },
+  "products": {
+    "productos": [
+      { "id": 101, "cod_barra": "7702020111645", "producto": "Leche entera Colanta bolsa 1 L", "categoria": "Lacteos", "precio_venta": 4600, "cantidad": 12, "proveedor": "Alimentos del Campo Ltda", "referencia": "" },
+      { "id": 102, "cod_barra": "7702020054078", "producto": "Huevo tipo A x30", "categoria": "Huevos", "precio_venta": 15800, "cantidad": 6, "proveedor": "Alimentos del Campo Ltda", "referencia": null },
+      { "id": 103, "cod_barra": "7702053000152", "producto": "Arroz Diana x500 g", "categoria": "Granos", "precio_venta": 3600, "cantidad": 20, "proveedor": "Distribuidora El Progreso S.A.S." },
+      { "id": 104, "cod_barra": "7702500001246", "producto": "Pan tajado Mills x300 g", "categoria": "Panaderia", "precio_venta": 3900, "cantidad": 8, "proveedor": "Distribuidora El Progreso S.A.S." },
+      { "id": 105, "cod_barra": "7702020543120", "producto": "Aceite Girasol 1 L", "categoria": "Aceites", "precio_venta": 11900, "cantidad": 10, "proveedor": "Distribuidora El Progreso S.A.S." },
+      { "id": 106, "cod_barra": "7702008000016", "producto": "Cafe liofilizado x250 g", "categoria": "Despensa", "precio_venta": 14500, "cantidad": 5, "proveedor": "Inversiones La Paloma" },
+      { "id": 107, "cod_barra": "7702020000017", "producto": "Panela x5 und", "categoria": "Despensa", "precio_venta": 12000, "cantidad": 4, "proveedor": "Inversiones La Paloma" },
+      { "id": 108, "cod_barra": "7702600500106", "producto": "Sardina en lata x155 g", "categoria": "Enlatados", "precio_venta": 4500, "cantidad": 15, "proveedor": "Inversiones La Paloma" },
+      { "id": 109, "cod_barra": "7702020167890", "producto": "Detergente en polvo x500 g", "categoria": "Aseo", "precio_venta": 8900, "cantidad": 7, "proveedor": "Distribuidora El Progreso S.A.S." },
+      { "id": 110, "cod_barra": "7703000123456", "producto": "Galletas sin proveedor anexo", "categoria": "Dulces", "precio_venta": 2400, "cantidad": 9, "proveedor": "" }
+    ]
+  }
+}
