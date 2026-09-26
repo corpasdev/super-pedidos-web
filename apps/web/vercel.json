@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "cd ../.. && npm install --ignore-scripts",
+  "buildCommand": "cd ../.. && npm run build -w packages/database-types -w packages/order-agent && npm run build -w apps/web",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
