@@ -13,6 +13,15 @@ export const formatDay = (day: string): string => {
   return DATE_FORMAT.format(new Date(year ?? 0, (month ?? 1) - 1, dayOfMonth ?? 1))
 }
 
+const SHORT_DATE_FORMAT = new Intl.DateTimeFormat("es-CO", { day: "numeric", month: "short" })
+
+/** «21 sept» a partir de "2026-09-21" (sin día de la semana ni punto final). */
+export const formatShortDay = (day: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return ""
+  const [year, month, dayOfMonth] = day.split("-").map(Number)
+  return SHORT_DATE_FORMAT.format(new Date(year ?? 0, (month ?? 1) - 1, dayOfMonth ?? 1)).replace(/\.$/, "").replace(" de ", " ")
+}
+
 const LONG_DATE_FORMAT = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long" })
 
 /** «miércoles, 30 de septiembre» a partir de "2026-09-30". */
