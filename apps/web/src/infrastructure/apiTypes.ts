@@ -308,6 +308,8 @@ export interface InboxVendorItem {
   sellerName: string | null
   supplierId: string
   supplierName: string
+  /** WhatsApp del proveedor para enviarle el pedido (null si no lo tiene). */
+  whatsappNumber: string | null
   deliversSameDay: boolean
   expectedDeliveryDay: string
   orderToday: { id: string; status: "confirmed" | "received"; totalCost: number; pendingAmount: number } | null

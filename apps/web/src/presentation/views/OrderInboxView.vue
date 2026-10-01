@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue"
 import { useMessage } from "naive-ui"
-import { RefreshOutline } from "@vicons/ionicons5"
+import { LogoWhatsapp, RefreshOutline } from "@vicons/ionicons5"
+import { orderMessage, whatsappLink } from "../whatsappOrder"
+import { useStoreProfileStore } from "../../stores/storeProfileStore"
 import { useInboxStore } from "../../stores/inboxStore"
 import { useWizardStore } from "../../stores/wizardStore"
 import type { InboxVendorItem } from "../../infrastructure/apiTypes"
@@ -108,6 +110,23 @@ async function open(vendor: InboxVendorItem): Promise<void> {
 
 function closeDrawer(show: boolean): void {
   if (!show) openSellerId.value = null
+}
+
+const storeProfile = useStoreProfileStore()
+
+/** Abre WhatsApp (web o app) con el pedido escrito para el número del proveedor. */
+function sendByWhatsapp(): void {
+  const vendor = openVendor.value
+  if (vendor === null || !vendor.whatsappNumber) return
+  const text = orderMessage({
+    storeName: storeProfile.profile?.name ?? null,
+    supplierName: vendor.supplierName,
+    day: inbox.inbox?.day ?? "",
+    lines: editor.lines.value
+      .map((line) => ({ name: line.productName, units: editor.unitsOf(line) }))
+      .filter((line) => line.units > 0),
+  })
+  window.open(whatsappLink(vendor.whatsappNumber, text), "_blank", "noopener")
 }
 
 async function price(lineProductId: string, unitCost: number): Promise<void> {
@@ -284,24 +303,43 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
               {{ es.orderReview.cashAfter(formatMoney(Math.max(0, editor.remainingCash.value - editor.total.value))) }}
             </n-text>
           </n-flex>
-          <n-button
-            v-if="isSelectedToday"
-            type="primary"
-            size="large"
-            :disabled="editor.productCount.value === 0 || wizard.suggestionLoading"
-            @click="showSheet = true"
-          >
-            {{ openVendor.deliversSameDay ? es.inbox.confirmAndReceive : es.inbox.confirm }}
-          </n-button>
-          <!-- Otro día: el botón dice solo «Confirmar»; se habilita el día que viene el proveedor (la fecha va en el tooltip) -->
-          <n-tooltip v-else>
-            <template #trigger>
-              <span>
-                <n-button type="primary" size="large" disabled>{{ es.inbox.confirm }}</n-button>
-              </span>
-            </template>
-            {{ es.inbox.confirmOnVisitDay(formatDay(inbox.inbox?.day ?? "")) }}
-          </n-tooltip>
+          <n-flex :size="8" :wrap="false" align="center">
+            <!-- Enviar el pedido por WhatsApp al proveedor (texto simple, listo para leer) -->
+            <n-tooltip>
+              <template #trigger>
+                <span>
+                  <n-button
+                    size="large"
+                    secondary
+                    :disabled="!openVendor.whatsappNumber || editor.productCount.value === 0 || wizard.suggestionLoading"
+                    @click="sendByWhatsapp"
+                  >
+                    <template #icon><n-icon :component="LogoWhatsapp" /></template>
+                    {{ es.inbox.send }}
+                  </n-button>
+                </span>
+              </template>
+              {{ openVendor.whatsappNumber ? es.inbox.sendHint(openVendor.whatsappNumber) : es.inbox.sendNoWhatsapp }}
+            </n-tooltip>
+            <n-button
+              v-if="isSelectedToday"
+              type="primary"
+              size="large"
+              :disabled="editor.productCount.value === 0 || wizard.suggestionLoading"
+              @click="showSheet = true"
+            >
+              {{ openVendor.deliversSameDay ? es.inbox.confirmAndReceive : es.inbox.confirm }}
+            </n-button>
+            <!-- Otro día: el botón dice solo «Confirmar»; se habilita el día que viene el proveedor (la fecha va en el tooltip) -->
+            <n-tooltip v-else>
+              <template #trigger>
+                <span>
+                  <n-button type="primary" size="large" disabled>{{ es.inbox.confirm }}</n-button>
+                </span>
+              </template>
+              {{ es.inbox.confirmOnVisitDay(formatDay(inbox.inbox?.day ?? "")) }}
+            </n-tooltip>
+          </n-flex>
         </n-flex>
       </template>
     </n-drawer-content>

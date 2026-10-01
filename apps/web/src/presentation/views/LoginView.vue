@@ -2,8 +2,9 @@
 import { ref } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useSessionStore } from "../../stores/sessionStore"
-import { palette, radius } from "../../theme/naiveOverrides"
+import { radius } from "../../theme/naiveOverrides"
 import { es } from "../../i18n/es"
+import BrandLogo from "../components/BrandLogo.vue"
 import { motion } from "motion-v"
 
 const router = useRouter()
@@ -30,14 +31,8 @@ async function handleSubmit(): Promise<void> {
       <n-card :bordered="false" :style="{ borderRadius: radius.xl, background: 'var(--surface)' }" :content-style="{ padding: '36px 32px' }">
         <n-flex vertical :size="28">
           <n-flex vertical align="center" :size="12">
-            <svg width="44" height="44" viewBox="0 0 26 26" aria-hidden="true">
-              <circle cx="13" cy="13" r="10" style="fill: none; stroke: var(--data); stroke-width: 5" />
-              <circle cx="13" cy="13" r="4.5" :style="{ fill: palette.accent }" />
-            </svg>
-            <n-flex vertical align="center" :size="2">
-              <n-text :style="{ fontSize: '22px', fontWeight: 600 }">{{ es.shell.brand }}</n-text>
-              <n-text depth="3" :style="{ fontSize: '13px' }">{{ es.app.tagline }}</n-text>
-            </n-flex>
+            <BrandLogo variant="extended" :height="56" />
+            <n-text depth="3" :style="{ fontSize: '13px' }">{{ es.app.tagline }}</n-text>
           </n-flex>
 
           <n-form @submit.prevent="handleSubmit">

@@ -29,6 +29,7 @@ export const es = {
   },
   shell: {
     brand: "SuperPedido",
+    logoLabel: "Controllist",
     greeting: (name: string): string => `Hola, ${name}`,
     greetingFallback: "Hola",
     pendingOrders: (count: number): string =>
@@ -75,6 +76,9 @@ export const es = {
     belowBase: (count: number): string => `${count} bajo la base`,
     review: "Revisar",
     confirm: "Confirmar",
+    send: "Enviar",
+    sendNoWhatsapp: "Este proveedor no tiene WhatsApp. Agrégalo en Proveedores.",
+    sendHint: (number: string): string => `Abre WhatsApp con el pedido para ${number}`,
     confirmAndReceive: "Confirmar y recibir",
     receivedToday: "✓ Recibido hoy",
     pendingArrival: (day: string): string => `Pendiente · llega ${day}`,
