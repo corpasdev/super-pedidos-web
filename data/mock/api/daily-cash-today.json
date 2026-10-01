@@ -1,0 +1,10 @@
+{
+  "dailyCash": {
+    "cashDate": "2026-10-05",
+    "openingAmount": 450000,
+    "spentAmount": 133400,
+    "remainingAmount": 316600,
+    "originalValue": "450000",
+    "description": "Caja de prueba (mock)"
+  }
+}

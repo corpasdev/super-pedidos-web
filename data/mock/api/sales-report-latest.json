@@ -1,0 +1,14 @@
+{
+  "report": {
+    "id": "mock-sales-report",
+    "fileName": "ventas-mock.xlsx",
+    "period": {
+      "startsAt": "2026-09-28",
+      "endsAt": "2026-10-04",
+      "coveredDays": 7
+    },
+    "coveredDaysOverride": null,
+    "lineCount": 208,
+    "totalUnits": 242
+  }
+}
