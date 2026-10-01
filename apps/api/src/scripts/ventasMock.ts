@@ -2,9 +2,13 @@
  * Excel de ventas de prueba (data/mock/ventas-mock.xlsx) armado con los productos de las tablas de
  * Supabase, para que el agente calcule los sugeridos con la API real.
  *
- *   npm run mock:ventas --workspace apps/api                         # genera el Excel (ventas de los 7 días hasta ayer)
- *   npm run mock:ventas --workspace apps/api -- --hasta 2026-09-30   # hasta esa fecha
+ *   npm run mock:ventas --workspace apps/api                         # Excel de la semana pasada (7 días hasta ayer)
+ *   npm run mock:ventas --workspace apps/api -- --para 2026-10-05    # la semana anterior a ese día de pedido
+ *   npm run mock:ventas --workspace apps/api -- --hasta 2026-09-30   # 7 días que terminan en esa fecha
  *   npm run mock:ventas --workspace apps/api -- --cargar             # además lo carga, igual que subirlo en la web
+ *   ... --cargar --reemplazar                                         # antes quita los Excel de prueba ya cargados
+ *
+ * El archivo queda en data/mock/ventas-semana-<desde>-al-<hasta>.xlsx (mismo formato del software de la tienda).
  *
  * Solo usa las tablas: proveedores con visita activa (supplier_sellers), sus productos (products) y
  * los niveles y costos de cada uno (product_settings). Las cantidades vendidas son inventadas, pero
@@ -19,8 +23,9 @@ import { Container } from "../container.js"
 import { loadEnvironment } from "../infrastructure/config/environment.js"
 import { writeXlsx } from "./xlsxWriter.js"
 
-const OUTPUT = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../data/mock/ventas-mock.xlsx")
-const FILE_NAME = "ventas-mock.xlsx"
+const MOCK_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "../../../../data/mock")
+/** Los Excel de prueba se reconocen por el nombre (para poder quitarlos sin tocar los reales). */
+const MOCK_PREFIXES = ["ventas-semana-", "ventas-mock"]
 /** Parte de los productos que se vendió en la semana (los demás no se movieron). */
 const SOLD_SHARE = 0.7
 
@@ -33,9 +38,12 @@ const isoDay = (date: Date): string => date.toISOString().slice(0, 10)
 const addDays = (day: string, days: number): string => isoDay(new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000))
 const yesterday = (): string => addDays(new Date().toLocaleDateString("en-CA"), -1)
 
-const until = argValue("--hasta") ?? yesterday()
+const forDay = argValue("--para")
+const until = argValue("--hasta") ?? (forDay !== null ? addDays(forDay, -1) : yesterday())
 if (!/^\d{4}-\d{2}-\d{2}$/.test(until)) throw new Error(`Fecha inválida: ${until} (usa AAAA-MM-DD)`)
 const from = addDays(until, -6)
+const FILE_NAME = `ventas-semana-${from}-al-${until}.xlsx`
+const OUTPUT = resolve(MOCK_DIR, FILE_NAME)
 
 /** Azar con semilla: la misma fecha da el mismo Excel. */
 const seeded = (seed: number) => () => {
@@ -130,10 +138,17 @@ mkdirSync(dirname(OUTPUT), { recursive: true })
 writeFileSync(OUTPUT, buffer)
 const units = sales.reduce((sum, sale) => sum + sale.quantity, 0)
 const soldProducts = new Set(sales.map((sale) => sale.barcode)).size
-console.log(`ventas-mock.xlsx: ventas del ${from} al ${until} · ${rows.length} filas · ${units} unidades · ${soldProducts} de ${(products ?? []).length} productos`)
+console.log(`${FILE_NAME}: ventas del ${from} al ${until} · ${rows.length} filas · ${units} unidades · ${soldProducts} de ${(products ?? []).length} productos`)
 console.log(`  proveedores con visita activa: ${supplierIds.length}`)
 
 if (process.argv.includes("--cargar")) {
+  if (process.argv.includes("--reemplazar")) {
+    const reports = await container.salesReportRepository.listAll(store.id)
+    for (const report of reports.filter((item) => MOCK_PREFIXES.some((prefix) => item.fileName.startsWith(prefix)))) {
+      await container.salesReportImportService.remove(store.id, report.id)
+      console.log(`  quitado el Excel de prueba anterior: ${report.fileName}`)
+    }
+  }
   const result = await container.salesReportImportService.import(store.id, { buffer, originalName: FILE_NAME })
   console.log(`  cargado como Excel de ventas (${result.report.lines.length} productos; sin producto en el catálogo: ${result.unmatchedSales.length})`)
 }
