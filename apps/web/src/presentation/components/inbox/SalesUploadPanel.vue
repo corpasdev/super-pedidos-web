@@ -112,8 +112,15 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
               </n-text>
             </n-flex>
           </n-card>
-          <n-flex :size="8">
-            <n-upload :custom-request="replace" :show-file-list="false" accept=".xlsx,.xls" @before-upload="beforeUpload">
+          <!-- Reemplazar y Quitar en una sola línea (n-upload ocupa todo el ancho por defecto) -->
+          <n-flex :size="8" :wrap="false" align="center">
+            <n-upload
+              :custom-request="replace"
+              :show-file-list="false"
+              accept=".xlsx,.xls"
+              :style="{ width: 'auto' }"
+              @before-upload="beforeUpload"
+            >
               <n-button secondary>
                 <template #icon><n-icon :component="SwapHorizontalOutline" /></template>
                 {{ es.inbox.salesReplace }}
