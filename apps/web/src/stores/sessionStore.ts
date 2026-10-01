@@ -1,4 +1,4 @@
-import { defineStore } from "pinia"
+import { acceptHMRUpdate, defineStore } from "pinia"
 import { computed, ref } from "vue"
 import type { Session } from "@supabase/supabase-js"
 import { supabaseAuthClient } from "../infrastructure/supabaseAuthClient"
@@ -69,3 +69,6 @@ export const useSessionStore = defineStore("session", () => {
 
   return { user, store, isReady, isSigningIn, signInError, isAuthenticated, initialize, signIn, signOut, refreshStore }
 })
+
+// Recarga en caliente (Vite): reemplaza el store en memoria cuando cambia este archivo, sin recargar la página.
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useSessionStore, import.meta.hot))

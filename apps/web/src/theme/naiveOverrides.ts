@@ -33,6 +33,13 @@ export const palette = {
   },
 } as const
 
+/** Alto de las opciones del sidebar; los buscadores y botones de las barras de herramientas lo igualan. */
+export const SIDEBAR_ITEM_HEIGHT = "44px"
+/** Para n-input / n-button size="large" que deben medir lo mismo que una opción del sidebar. */
+export const toolbarControlOverrides = { heightLarge: SIDEBAR_ITEM_HEIGHT, fontSizeLarge: "15px" } as const
+/** n-tag size="large" del mismo alto (el contador junto al buscador). */
+export const toolbarTagOverrides = { heightLarge: SIDEBAR_ITEM_HEIGHT, fontSizeLarge: "15px", padding: "0 16px" } as const
+
 export const radius = { xl: "32px", lg: "20px", md: "14px", sm: "10px", pill: "999px" } as const
 
 const FONT_FAMILY = "Manrope, 'Segoe UI', system-ui, -apple-system, sans-serif"
@@ -110,10 +117,14 @@ const buildOverrides = (tone: typeof palette.light | typeof palette.dark): Globa
     siderColor: tone.surface,
     headerColor: tone.surface,
     siderBorderColor: "transparent",
+    // Botón para contraer/expandir el sidebar: como un campo de búsqueda sin foco (mismo fondo y borde).
+    siderToggleButtonColor: tone.surface,
+    siderToggleButtonIconColor: tone.ink,
+    siderToggleButtonBorder: `1px solid ${tone.line}`,
   },
   Menu: {
     borderRadius: radius.pill,
-    itemHeight: "44px",
+    itemHeight: SIDEBAR_ITEM_HEIGHT,
     fontSize: "14px",
     itemTextColor: tone.ink,
     itemIconColor: tone.ink,

@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from "vue"
-import { useRouter } from "vue-router"
-import { NButton, NFlex, NIcon, NTag, NText, type DataTableColumns } from "naive-ui"
-import { CartOutline, SearchOutline } from "@vicons/ionicons5"
+import { NFlex, NIcon, NInputNumber, NTag, NText, useNotification, type DataTableColumns } from "naive-ui"
+import { AddOutline, AlertCircle, CheckmarkCircle, SearchOutline, Sync } from "@vicons/ionicons5"
+import CreateSupplierModal from "../components/catalog/CreateSupplierModal.vue"
+import SupplierProductsModal from "../components/catalog/SupplierProductsModal.vue"
 import { apiClient } from "../../infrastructure/apiClient"
 import type { SupplierListItem } from "../../infrastructure/apiTypes"
-import { useWizardStore } from "../../stores/wizardStore"
-import { palette } from "../../theme/naiveOverrides"
 import { es } from "../../i18n/es"
-import { formatDate, formatMoney } from "../../i18n/format"
-import { tablePagination, totalLabel } from "../tables"
+import { toolbarControlOverrides, toolbarTagOverrides } from "../../theme/naiveOverrides"
+import { moneyFormatter, moneyParser } from "../../i18n/format"
+import { moneyInputProps } from "../numericInput"
+import { tablePagination, totalCount, totalLabel } from "../tables"
 
-const router = useRouter()
-const wizard = useWizardStore()
 
 const suppliers = ref<SupplierListItem[]>([])
 const loading = ref(false)
@@ -20,8 +19,9 @@ const loadError = ref<string | null>(null)
 const search = ref("")
 const pagination = tablePagination()
 
-onMounted(async () => {
+async function loadSuppliers(): Promise<void> {
   loading.value = true
+  loadError.value = null
   try {
     const response = await apiClient.get<{ suppliers: SupplierListItem[] }>("/suppliers")
     suppliers.value = response.suppliers
@@ -30,7 +30,26 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+}
+
+onMounted(loadSuppliers)
+
+const showCreate = ref(false)
+
+/** Al tocar una fila se abren los productos de ese proveedor (salvo si se toca un campo editable). */
+const productsOf = ref<SupplierListItem | null>(null)
+const rowProps = (supplier: SupplierListItem) => ({
+  style: "cursor: pointer",
+  onClick: (event: MouseEvent) => {
+    if ((event.target as HTMLElement).closest("input, button, .n-input-number")) return
+    productsOf.value = supplier
+  },
 })
+
+async function onSupplierCreated(): Promise<void> {
+  showCreate.value = false
+  await loadSuppliers()
+}
 
 const filtered = computed(() => {
   const term = search.value.trim().toLowerCase()
@@ -47,11 +66,80 @@ const frequencyLabel = (supplier: SupplierListItem): string => {
   return supplier.visitFrequencyDays === 14 ? es.suppliersView.biweekly : es.suppliersView.weekly
 }
 
-function makeOrder(supplierId: string): void {
-  wizard.reset()
-  wizard.selectedSupplierId = supplierId
-  void router.push("/pedido")
+// ── Mínimo y tope editables en la tabla (se guardan solos, como en Productos) ──
+type AmountField = "minimumOrderAmount" | "maximumOrderAmount"
+const notification = useNotification()
+const rowState = ref<Record<string, "saving" | "saved" | "failed">>({})
+const debouncers = new Map<string, ReturnType<typeof setTimeout>>()
+
+const setRowState = (supplierId: string, state: "saving" | "saved" | "failed" | null): void => {
+  const next = { ...rowState.value }
+  if (state === null) delete next[supplierId]
+  else next[supplierId] = state
+  rowState.value = next
 }
+
+/** El mínimo no puede quedar por encima del tope (sin tope = sin límite). */
+const amountProblem = (supplier: SupplierListItem): string | null =>
+  supplier.maximumOrderAmount !== null && supplier.minimumOrderAmount > supplier.maximumOrderAmount ? es.catalogEntry.maximumBelowMinimum : null
+
+async function saveAmount(supplier: SupplierListItem, field: AmountField): Promise<void> {
+  const problem = amountProblem(supplier)
+  if (problem !== null) {
+    setRowState(supplier.id, "failed")
+    notification.error({ title: supplier.name, content: problem, duration: 4000 })
+    return
+  }
+  setRowState(supplier.id, "saving")
+  try {
+    await apiClient.patch(`/suppliers/${supplier.id}`, { [field]: supplier[field] })
+    setRowState(supplier.id, "saved")
+    setTimeout(() => {
+      if (rowState.value[supplier.id] === "saved") setRowState(supplier.id, null)
+    }, 2000)
+  } catch (error) {
+    setRowState(supplier.id, "failed")
+    notification.error({ title: supplier.name, content: error instanceof Error ? error.message : es.common.error, duration: 4000 })
+  }
+}
+
+function setAmount(supplier: SupplierListItem, field: AmountField, value: number | null): void {
+  if (field === "minimumOrderAmount") supplier.minimumOrderAmount = value ?? 0
+  else supplier.maximumOrderAmount = value
+  const key = `${supplier.id}:${field}`
+  const previous = debouncers.get(key)
+  if (previous !== undefined) clearTimeout(previous)
+  debouncers.set(
+    key,
+    setTimeout(() => {
+      debouncers.delete(key)
+      void saveAmount(supplier, field)
+    }, 600),
+  )
+}
+
+const saveStateIcon = (supplierId: string) => {
+  const state = rowState.value[supplierId]
+  if (state === "saving") return h(NIcon, { component: Sync, color: "var(--data)" })
+  if (state === "saved") return h(NIcon, { component: CheckmarkCircle, color: "var(--success)" })
+  if (state === "failed") return h(NIcon, { component: AlertCircle, color: "var(--danger)" })
+  return null
+}
+
+const amountCell = (supplier: SupplierListItem, field: AmountField, label: string) =>
+  h(NInputNumber, {
+    value: supplier[field],
+    min: 0,
+    precision: 0,
+    showButton: false,
+    size: "small",
+    clearable: field === "maximumOrderAmount",
+    placeholder: field === "maximumOrderAmount" ? es.suppliersView.noMaximum : undefined,
+    format: moneyFormatter,
+    parse: moneyParser,
+    inputProps: moneyInputProps({ "aria-label": `${supplier.name}: ${label}`, style: "text-align: right" }),
+    "onUpdate:value": (value: number | null) => setAmount(supplier, field, value),
+  })
 
 const columns: DataTableColumns<SupplierListItem> = [
   {
@@ -61,7 +149,7 @@ const columns: DataTableColumns<SupplierListItem> = [
     sorter: (left, right) => left.name.localeCompare(right.name, "es"),
     render: (supplier) =>
       h(NFlex, { vertical: true, size: 0 }, () => [
-        h(NText, { style: { fontWeight: 500 } }, () => supplier.name),
+        h(NFlex, { align: "center", size: 6, wrap: false }, () => [h(NText, { style: { fontWeight: 500 } }, () => supplier.name), saveStateIcon(supplier.id)]),
         supplier.taxId ? h(NText, { depth: 3, style: { fontSize: "11px" } }, () => es.suppliersView.taxId(supplier.taxId!)) : null,
       ]),
   },
@@ -77,13 +165,15 @@ const columns: DataTableColumns<SupplierListItem> = [
     key: "minimumOrderAmount",
     title: es.suppliersView.columns.minimum,
     align: "right",
-    render: (supplier) => formatMoney(supplier.minimumOrderAmount),
+    width: 150,
+    render: (supplier) => amountCell(supplier, "minimumOrderAmount", es.suppliersView.columns.minimum),
   },
   {
     key: "maximumOrderAmount",
     title: es.suppliersView.columns.maximum,
     align: "right",
-    render: (supplier) => (supplier.maximumOrderAmount === null ? es.suppliersView.noMaximum : formatMoney(supplier.maximumOrderAmount)),
+    width: 150,
+    render: (supplier) => amountCell(supplier, "maximumOrderAmount", es.suppliersView.columns.maximum),
   },
   {
     key: "productCount",
@@ -91,65 +181,58 @@ const columns: DataTableColumns<SupplierListItem> = [
     align: "right",
     sorter: (left, right) => left.productCount - right.productCount,
   },
-  {
-    key: "lastOrderAt",
-    title: es.suppliersView.columns.lastOrder,
-    render: (supplier) => (supplier.lastOrderAt ? formatDate(supplier.lastOrderAt) : es.suppliersView.never),
-  },
-  {
-    key: "nextOrderDate",
-    title: es.suppliersView.columns.nextVisit,
-    sorter: (left, right) =>
-      (left.nextOrderDate ? new Date(left.nextOrderDate).getTime() : Infinity) -
-      (right.nextOrderDate ? new Date(right.nextOrderDate).getTime() : Infinity),
-    render: (supplier) => {
-      if (supplier.isVisitingToday) {
-        return h(NTag, { size: "small", round: true, bordered: false, color: { color: palette.accent, textColor: palette.brandDeep } }, () => es.suppliersView.today)
-      }
-      return supplier.nextOrderDate ? formatDate(supplier.nextOrderDate) : "—"
-    },
-  },
-  {
-    key: "actions",
-    title: es.suppliersView.columns.actions,
-    align: "right",
-    render: (supplier) =>
-      h(
-        NButton,
-        { size: "small", type: "primary", disabled: !supplier.hasSchedule, onClick: () => makeOrder(supplier.id) },
-        { default: () => es.suppliersView.makeOrder, icon: () => h(NIcon, { component: CartOutline }) },
-      ),
-  },
 ]
 </script>
 
 <template>
-  <n-flex vertical :size="20">
-    <n-flex vertical :size="2">
-      <n-text :style="{ fontSize: '20px', fontWeight: 500 }">{{ es.suppliersView.title }}</n-text>
-      <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.suppliersView.subtitle }}</n-text>
+  <n-flex vertical :size="16">
+    <n-text :style="{ fontSize: '20px', fontWeight: 500 }">{{ es.suppliersView.title }}</n-text>
+
+    <!-- Buscador fuera de la tabla, como en Productos (ancho fijo: Naive pone width 100% por defecto) -->
+    <n-flex align="center" justify="space-between" :size="12">
+      <n-input
+        v-model:value="search"
+        :placeholder="es.suppliersView.search"
+        clearable
+        size="large"
+        :theme-overrides="toolbarControlOverrides"
+        :style="{ width: '440px', maxWidth: '100%' }">
+        <template #prefix><n-icon :component="SearchOutline" /></template>
+      </n-input>
+      <n-flex align="center" :size="12">
+        <n-tag
+          round
+          size="large"
+          :bordered="false"
+          :theme-overrides="toolbarTagOverrides"
+          class="tabular-nums"
+          :aria-label="totalLabel(filtered.length, 'supplier')"
+          :title="totalLabel(filtered.length, 'supplier')"
+        >
+          {{ totalCount(filtered.length) }}
+        </n-tag>
+        <n-button type="primary" size="large" :theme-overrides="toolbarControlOverrides" @click="showCreate = true">
+          <template #icon><n-icon :component="AddOutline" /></template>
+          {{ es.catalogEntry.newSupplier }}
+        </n-button>
+      </n-flex>
     </n-flex>
 
     <n-alert v-if="loadError !== null" type="error" :bordered="false">{{ loadError }}</n-alert>
 
-    <n-card :bordered="false">
-      <template #header>
-        <n-input v-model:value="search" :placeholder="es.suppliersView.search" clearable :style="{ maxWidth: '320px' }">
-          <template #prefix><n-icon :component="SearchOutline" /></template>
-        </n-input>
-      </template>
-      <template #header-extra>
-        <n-tag round :bordered="false">{{ totalLabel(filtered.length, "supplier") }}</n-tag>
-      </template>
-      <n-data-table
-        :columns="columns"
-        :data="filtered"
-        :loading="loading"
-        :pagination="pagination"
-        :row-key="(supplier: SupplierListItem) => supplier.id"
-        :scroll-x="1100"
-        :bordered="false"
-      />
-    </n-card>
+    <n-data-table
+      :columns="columns"
+      :data="filtered"
+      :loading="loading"
+      :pagination="pagination"
+      :row-key="(supplier: SupplierListItem) => supplier.id"
+      :scroll-x="780"
+      :bordered="true"
+      :row-props="rowProps"
+    />
+
+    <SupplierProductsModal :supplier="productsOf" @close="productsOf = null" />
+
+    <CreateSupplierModal :show="showCreate" @close="showCreate = false" @created="onSupplierCreated" />
   </n-flex>
 </template>

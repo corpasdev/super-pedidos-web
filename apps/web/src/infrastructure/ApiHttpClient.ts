@@ -23,6 +23,8 @@ export interface ApiClientOptions {
   baseUrl: string
   /** Devuelve el access_token de Supabase (jwt) o null si no hay sesión. */
   tokenProvider: () => string | null
+  /** Modo de prueba: si devuelve algo distinto de undefined, esa es la respuesta y no se llama a la API. */
+  mock?: (method: string, path: string, body?: unknown) => Promise<unknown>
 }
 
 export class ApiClient {
@@ -55,6 +57,10 @@ export class ApiClient {
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    if (this.options.mock) {
+      const mocked = await this.options.mock(method, path, body instanceof FormData ? undefined : body)
+      if (mocked !== undefined) return mocked as T
+    }
     const token = this.options.tokenProvider()
     const headers: Record<string, string> = {}
     if (token !== null) headers["Authorization"] = `Bearer ${token}`

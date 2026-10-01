@@ -6,6 +6,7 @@ import { es } from "../../i18n/es"
 import { formatDate, formatMoney, moneyFormatter, moneyParser } from "../../i18n/format"
 import type { OrderListItem, OrderPaymentChange } from "../../infrastructure/apiTypes"
 import { tablePagination, totalLabel } from "../tables"
+import { moneyInputProps } from "../numericInput"
 
 const history = useHistoryStore()
 const message = useMessage()
@@ -134,11 +135,11 @@ const orderColumns: DataTableColumns<OrderListItem> = [
           precision: 0,
           showButton: false,
           size: "small",
-          formatter: moneyFormatter,
-          parser: moneyParser,
+          format: moneyFormatter,
+          parse: moneyParser,
           status: order.pendingAmount > 0 ? "warning" : undefined,
           disabled: history.savingPayment.has(order.id),
-          inputProps: { "aria-label": es.history.pendingInput(order.supplierName ?? "") },
+          inputProps: moneyInputProps({ "aria-label": es.history.pendingInput(order.supplierName ?? "") }),
           "onUpdate:value": (value: number | null) => {
             pendingDrafts.value = { ...pendingDrafts.value, [order.id]: value }
           },

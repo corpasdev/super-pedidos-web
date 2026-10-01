@@ -12,15 +12,27 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     component: AppLayout,
     children: [
-      { path: "", redirect: "/inicio" },
+      { path: "", redirect: "/pedido" },
       {
         path: "inicio",
         name: "home",
         component: () => import("./presentation/views/DashboardView.vue"),
       },
       {
+        // Hacer pedido = bandeja del día: el pedido de cada vendedor que viene hoy ya viene listo.
         path: "pedido",
         name: "order-wizard",
+        component: () => import("./presentation/views/OrderInboxView.vue"),
+      },
+      {
+        path: "pedido/revisar/:supplierId",
+        name: "order-review",
+        component: () => import("./presentation/views/OrderReviewView.vue"),
+      },
+      {
+        // Asistente anterior de 5 pasos (oculto; sigue disponible por su dirección).
+        path: "pedido/asistente",
+        name: "order-assistant",
         component: () => import("./presentation/views/OrderWizardView.vue"),
       },
       {
@@ -50,7 +62,7 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-  { path: "/:pathMatch(.*)*", redirect: "/inicio" },
+  { path: "/:pathMatch(.*)*", redirect: "/pedido" },
 ]
 
 export const router = createRouter({
@@ -63,7 +75,7 @@ router.beforeEach(async (to) => {
   if (!session.isReady) await session.initialize()
 
   if (to.name === "login") {
-    return session.isAuthenticated ? { name: "home" } : true
+    return session.isAuthenticated ? { name: "order-wizard" } : true
   }
   return session.isAuthenticated ? true : { name: "login", query: { redirect: to.fullPath } }
 })

@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, h, onMounted, reactive, ref, watch } from "vue"
-import { NButton, NFlex, NIcon, NInputNumber, NText, useNotification, type DataTableColumns } from "naive-ui"
-import { AlertCircle, Barcode, Checkmark, CheckmarkCircle, SearchOutline, Sync } from "@vicons/ionicons5"
+import { NFlex, NIcon, NInputNumber, NText, useNotification, type DataTableColumns } from "naive-ui"
+import { AddOutline, AlertCircle, CheckmarkCircle, SearchOutline, Sync } from "@vicons/ionicons5"
+import CreateProductModal from "../components/catalog/CreateProductModal.vue"
 import { useProductsStore } from "../../stores/productsStore"
 import { es } from "../../i18n/es"
-import { formatMoney } from "../../i18n/format"
+import { toolbarControlOverrides, toolbarTagOverrides } from "../../theme/naiveOverrides"
+import { moneyFormatter, moneyParser } from "../../i18n/format"
 import type { ProductItem } from "../../infrastructure/apiTypes"
-import { tablePagination, totalLabel } from "../tables"
+import { tablePagination, totalCount, totalLabel } from "../tables"
+import { moneyInputProps, unitsInputProps } from "../numericInput"
 
 const store = useProductsStore()
 const notification = useNotification()
@@ -14,28 +17,51 @@ const notification = useNotification()
 const search = ref("")
 
 interface EditableFields {
+  /** Unidades actuales (conteo real). */
+  stockUnits: number
+  /** Precio de venta de la tienda. */
+  salePrice: number
   packSize: number
   unitCost: number
+  /** Tope (T). */
   maxStockUnits: number | null
+  /** Base (B). */
+  minStockUnits: number | null
+  /** Punto de pedido (PD). */
+  reorderPointUnits: number | null
 }
+
+/** Niveles que se pueden dejar vacíos (producto aún sin niveles: se repone lo movido). */
+const NULLABLE_FIELDS: ReadonlySet<keyof EditableFields> = new Set(["maxStockUnits", "minStockUnits", "reorderPointUnits"])
 
 const editValues = reactive<Record<string, EditableFields>>({})
 const debouncers = new Map<string, ReturnType<typeof setTimeout>>()
 
-const countTarget = ref<ProductItem | null>(null)
-const countValue = ref(0)
-
-const supplierOptions = computed(() => store.suppliers.map((s) => ({ label: s.name, value: s.id })))
-
-/** Por defecto sin filtro: todos los productos de la tienda. Si se vuelve a la vista, se respeta el filtro elegido. */
+/** Una sola tabla con todos los productos de la tienda; el proveedor es solo una columna. */
 onMounted(async () => {
-  await Promise.all([store.loadSuppliers(), store.selectSupplier(store.selectedSupplierId)])
+  await Promise.all([store.selectSupplier(null), store.loadSuppliers()])
 })
+
+const showCreate = ref(false)
+const categories = computed(() => [...new Set(store.products.map((product) => product.category))].sort((a, b) => a.localeCompare(b, "es")))
+
+async function onProductCreated(): Promise<void> {
+  showCreate.value = false
+  await store.selectSupplier(null)
+}
 
 function ensureEdit(product: ProductItem): EditableFields {
   const current = editValues[product.id]
   if (current === undefined) {
-    const fresh: EditableFields = { packSize: product.packSize, unitCost: product.unitCost, maxStockUnits: product.maxStockUnits }
+    const fresh: EditableFields = {
+      stockUnits: product.stockUnits,
+      salePrice: product.salePrice,
+      packSize: product.packSize,
+      unitCost: product.unitCost,
+      maxStockUnits: product.maxStockUnits,
+      minStockUnits: product.minStockUnits,
+      reorderPointUnits: product.reorderPointUnits,
+    }
     editValues[product.id] = fresh
     return fresh
   }
@@ -76,11 +102,9 @@ function scheduleSave(product: ProductItem, field: keyof EditableFields): void {
 
 function setEditValue(product: ProductItem, field: keyof EditableFields, value: number | null): void {
   const edit = ensureEdit(product)
-  if (field === "maxStockUnits") {
-    edit.maxStockUnits = value
-  } else if (value !== null) {
-    edit[field] = value
-  }
+  // Los niveles se pueden dejar vacíos; el empaque no.
+  if (value === null && !NULLABLE_FIELDS.has(field)) return
+  ;(edit as Record<keyof EditableFields, number | null>)[field] = value
   scheduleSave(product, field)
 }
 
@@ -89,12 +113,10 @@ function editOf(product: ProductItem, field: keyof EditableFields): number | nul
 }
 
 async function plainSave(product: ProductItem, field: keyof EditableFields): Promise<void> {
-  await store.saveSettings(product.id, { [field]: ensureEdit(product)[field] })
-}
-
-function openCountDialog(product: ProductItem): void {
-  countTarget.value = product
-  countValue.value = product.stockUnits
+  const value = ensureEdit(product)[field]
+  const problem =
+    field === "stockUnits" ? await store.saveStock(product.id, value ?? 0) : await store.saveSettings(product.id, { [field]: value })
+  if (problem !== null) notification.error({ title: product.name, content: problem, duration: 4000 })
 }
 
 const pagination = tablePagination()
@@ -107,6 +129,17 @@ const saveStateIcon = (productId: string) => {
   return null
 }
 
+/** Nombre de cada campo tal como lo ve el dueño (para lectores de pantalla). */
+const FIELD_LABELS: Record<keyof EditableFields, string> = {
+  stockUnits: es.products.columns.stock,
+  salePrice: es.products.columns.salePrice,
+  packSize: es.products.columns.pack,
+  unitCost: es.products.columns.purchasePrice,
+  minStockUnits: es.products.columns.minStock,
+  reorderPointUnits: es.products.columns.reorderPoint,
+  maxStockUnits: es.products.columns.maxStock,
+}
+
 const numberCell = (product: ProductItem, field: keyof EditableFields, props: Record<string, unknown>) =>
   h(NInputNumber, {
     value: editOf(product, field),
@@ -114,11 +147,26 @@ const numberCell = (product: ProductItem, field: keyof EditableFields, props: Re
     precision: 0,
     showButton: false,
     size: "small",
+    inputProps: unitsInputProps({ "aria-label": `${product.name}: ${FIELD_LABELS[field]}` }),
     "onUpdate:value": (value: number | null) => setEditValue(product, field, value),
     ...props,
   })
 
-/** Sin filtro de proveedor se muestra de qué proveedor es cada producto. */
+/** Precio en pesos, editable: se ve como $3.800 y solo acepta números. */
+const moneyCell = (product: ProductItem, field: "unitCost" | "salePrice") =>
+  h(NInputNumber, {
+    value: editOf(product, field),
+    min: 0,
+    precision: 0,
+    showButton: false,
+    size: "small",
+    format: moneyFormatter,
+    parse: moneyParser,
+    inputProps: moneyInputProps({ "aria-label": `${product.name}: ${FIELD_LABELS[field]}`, style: "text-align: right" }),
+    "onUpdate:value": (value: number | null) => setEditValue(product, field, value),
+  })
+
+/** De qué proveedor es cada producto (se puede ordenar por esta columna). */
 const supplierColumn: DataTableColumns<ProductItem>[number] = {
   key: "supplierName",
   title: es.products.columns.supplier,
@@ -127,9 +175,7 @@ const supplierColumn: DataTableColumns<ProductItem>[number] = {
   render: (product) => product.supplierName ?? "—",
 }
 
-const columns = computed<DataTableColumns<ProductItem>>(() =>
-  store.selectedSupplierId === null ? [baseColumns[0]!, supplierColumn, ...baseColumns.slice(1)] : baseColumns,
-)
+const columns = computed<DataTableColumns<ProductItem>>(() => [baseColumns[0]!, supplierColumn, ...baseColumns.slice(1)])
 
 const baseColumns: DataTableColumns<ProductItem> = [
   {
@@ -143,119 +189,98 @@ const baseColumns: DataTableColumns<ProductItem> = [
         h(NText, { depth: 3, style: { fontSize: "11px", fontFamily: "ui-monospace, monospace" } }, () => product.barcode),
       ]),
   },
-  { key: "packSize", title: es.products.columns.pack, width: 100, render: (product) => numberCell(product, "packSize", { min: 1, max: 10_000 }) },
-  {
-    key: "salePrice",
-    title: es.products.columns.salePrice,
-    align: "right",
-    width: 140,
-    sorter: (left, right) => left.salePrice - right.salePrice,
-    render: (product) => h(NText, { class: "tabular-nums" }, () => formatMoney(product.salePrice)),
-  },
   {
     key: "stockUnits",
     title: es.products.columns.stock,
     align: "right",
     sorter: (left, right) => left.stockUnits - right.stockUnits,
-    render: (product) => es.products.stockUnits(product.stockUnits),
+    width: 150,
+    render: (product) => numberCell(product, "stockUnits", {}),
   },
-  { key: "maxStockUnits", title: es.products.columns.maxStock, width: 100, render: (product) => numberCell(product, "maxStockUnits", {}) },
   {
-    key: "actions",
-    title: es.products.columns.actions,
+    key: "unitCost",
+    title: es.products.columns.purchasePrice,
     align: "right",
-    render: (product) =>
-      h(NButton, { size: "small", secondary: true, onClick: () => openCountDialog(product) }, {
-        default: () => es.products.count,
-        icon: () => h(NIcon, { component: Barcode }),
-      }),
+    width: 150,
+    sorter: (left, right) => left.unitCost - right.unitCost,
+    // Precio al que lo compra la tienda; al escribirlo queda como dato del dueño.
+    render: (product) => moneyCell(product, "unitCost"),
   },
+  {
+    key: "salePrice",
+    title: es.products.columns.salePrice,
+    align: "right",
+    width: 150,
+    sorter: (left, right) => left.salePrice - right.salePrice,
+    render: (product) => moneyCell(product, "salePrice"),
+  },
+  // Niveles del sugerido: base y tope. El punto de pedido no se muestra aquí (sí en Sugeridos, en la barra de cada producto).
+  { key: "minStockUnits", title: es.products.columns.minStock, width: 90, render: (product) => numberCell(product, "minStockUnits", {}) },
+  { key: "maxStockUnits", title: es.products.columns.maxStock, width: 90, render: (product) => numberCell(product, "maxStockUnits", {}) },
 ]
 
-async function saveCount(): Promise<void> {
-  if (countTarget.value === null) return
-  try {
-    await store.countStock(countTarget.value.id, countValue.value)
-    notification.success({ content: es.products.countSuccess, duration: 2000 })
-    countTarget.value = null
-  } catch {
-    notification.error({ content: es.products.saveFailed, duration: 2500 })
-  }
-}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <header class="flex flex-col gap-1">
       <h1 class="text-lg md:text-xl font-semibold text-surface-900">{{ es.products.title }}</h1>
-      <p class="text-sm text-surface-500">{{ es.products.subtitle }} {{ es.products.actionsHint }}</p>
     </header>
 
-    <!-- Filtro de proveedor y buscador en la misma línea (anchos fijos: Naive pone width 100% por defecto) -->
-    <n-flex align="center" :size="12">
-      <n-text :style="{ fontSize: '14px' }">{{ es.products.selectSupplier }}</n-text>
-      <n-select
-        :value="store.selectedSupplierId"
-        :options="supplierOptions"
-        :loading="store.suppliersLoading"
-        :placeholder="es.products.allSuppliers"
-        filterable
+    <!-- Buscador (ancho fijo: Naive pone width 100% por defecto) -->
+    <n-flex align="center" justify="space-between" :size="12">
+      <n-input
+        v-model:value="search"
+        :placeholder="es.products.search"
         clearable
-        :style="{ width: '260px' }"
-        @update:value="(id: string | null) => store.selectSupplier(id)"
-      />
-      <n-input v-model:value="search" :placeholder="es.products.search" clearable :style="{ width: '280px' }">
+        size="large"
+        :theme-overrides="toolbarControlOverrides"
+        :style="{ width: '440px', maxWidth: '100%' }">
         <template #prefix><n-icon :component="SearchOutline" /></template>
       </n-input>
+      <n-flex align="center" :size="12">
+        <n-tag
+          round
+          size="large"
+          :bordered="false"
+          :theme-overrides="toolbarTagOverrides"
+          class="tabular-nums"
+          :aria-label="totalLabel(filtered.length, 'product')"
+          :title="totalLabel(filtered.length, 'product')"
+        >
+          {{ totalCount(filtered.length) }}
+        </n-tag>
+        <n-button type="primary" size="large" :theme-overrides="toolbarControlOverrides" @click="showCreate = true">
+          <template #icon><n-icon :component="AddOutline" /></template>
+          {{ es.catalogEntry.newProduct }}
+        </n-button>
+      </n-flex>
     </n-flex>
 
     <n-alert v-if="store.error !== null" type="error" :bordered="false">
       {{ store.error }}
     </n-alert>
 
-    <n-card :bordered="false">
-      <template #header>
-        <n-text :style="{ fontSize: '16px', fontWeight: 500 }">{{ store.selectedSupplier?.name ?? es.products.allSuppliers }}</n-text>
-      </template>
-      <template #header-extra>
-        <n-tag round :bordered="false">{{ totalLabel(filtered.length, "product") }}</n-tag>
-      </template>
-      <n-data-table
-        :columns="columns"
-        :data="filtered"
-        :loading="store.productsLoading"
-        :pagination="pagination"
-        :row-key="(product: ProductItem) => product.id"
-        :scroll-x="store.selectedSupplierId === null ? 960 : 780"
-        :bordered="false"
-      >
-        <template #empty>
-          <n-empty :description="es.products.noProducts" />
-        </template>
-      </n-data-table>
-    </n-card>
-
-    <n-modal
-      :show="countTarget !== null"
-      preset="card"
-      :title="countTarget === null ? '' : `${es.products.countDialogTitle} · ${countTarget.name}`"
-      class="w-[95%] max-w-sm"
-      @update:show="(show: boolean) => { if (!show) countTarget = null }"
+    <n-data-table
+      :columns="columns"
+      :data="filtered"
+      :loading="store.productsLoading"
+      :pagination="pagination"
+      :row-key="(product: ProductItem) => product.id"
+      :scroll-x="1110"
+      :bordered="true"
     >
-      <div class="flex flex-col gap-4">
-        <p class="text-sm text-surface-600">{{ es.products.countDialogHint }}</p>
-        <div class="flex flex-col gap-1.5">
-          <span class="text-sm text-surface-700">{{ es.products.currentStock }}: <b>{{ countTarget?.stockUnits ?? 0 }}</b></span>
-          <n-input-number v-model:value="countValue" :min="0" :precision="0" :show-button="false" class="w-full" />
-        </div>
-        <div class="flex justify-end gap-2">
-          <n-button secondary @click="countTarget = null">{{ es.common.cancel }}</n-button>
-          <n-button type="primary" @click="saveCount">
-            <template #icon><n-icon :component="Checkmark" /></template>
-            {{ es.products.countNow }}
-          </n-button>
-        </div>
-      </div>
-    </n-modal>
+      <template #empty>
+        <n-empty :description="es.products.noProducts" />
+      </template>
+    </n-data-table>
+
+    <CreateProductModal
+      :show="showCreate"
+      :suppliers="store.suppliers"
+      :categories="categories"
+      @close="showCreate = false"
+      @created="onProductCreated"
+    />
   </div>
 </template>

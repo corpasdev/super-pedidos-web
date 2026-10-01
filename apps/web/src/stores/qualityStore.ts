@@ -1,5 +1,5 @@
 import { computed, ref } from "vue"
-import { defineStore } from "pinia"
+import { acceptHMRUpdate, defineStore } from "pinia"
 import { apiClient } from "../infrastructure/apiClient"
 import type { DataQualityIssueItem } from "../infrastructure/apiTypes"
 
@@ -31,3 +31,6 @@ export const useQualityStore = defineStore("quality", () => {
 
   return { issues, loading, error, byCode, loadIssues }
 })
+
+// Recarga en caliente (Vite): reemplaza el store en memoria cuando cambia este archivo, sin recargar la página.
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useQualityStore, import.meta.hot))

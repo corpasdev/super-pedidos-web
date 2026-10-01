@@ -7,6 +7,7 @@ import { es } from "../../../i18n/es"
 import { formatMoney, moneyFormatter, moneyParser } from "../../../i18n/format"
 import type { SuggestionLine } from "../../../infrastructure/apiTypes"
 import { tablePagination, totalLabel } from "../../tables"
+import { moneyInputProps, unitsInputProps } from "../../numericInput"
 
 const wizard = useWizardStore()
 const confirmError = ref<string | null>(null)
@@ -58,6 +59,26 @@ async function commitUnitCost(entry: EditableLine): Promise<void> {
   }
 }
 
+/** Estado del inventario (EA) y hasta qué nivel llegó la plata. */
+const levelChips = (line: SuggestionLine) => {
+  const position = line.stockPosition
+  if (position === null) return []
+  const statusChip =
+    position.status === "below_base"
+      ? h(NTag, { round: true, size: "small", type: "error", bordered: false }, () => es.reviewStep.belowBaseChip)
+      : position.status === "at_base"
+        ? h(NTag, { round: true, size: "small", type: "warning", bordered: false }, () => es.reviewStep.atBaseChip)
+        : position.status === "no_levels"
+          ? h(NTag, { round: true, size: "small", bordered: false }, () => es.reviewStep.noLevelsChip)
+          : null
+  const reachedChip = h(
+    NTag,
+    { round: true, size: "small", bordered: false, type: position.reached === "tope" ? "success" : position.reached === "none" ? "error" : "info" },
+    () => es.reviewStep.reachedChips[position.reached] ?? position.reached,
+  )
+  return [statusChip, reachedChip]
+}
+
 const costChip = (line: SuggestionLine) => {
   if (line.hasNoCost) return h(NTag, { round: true, size: "small", type: "error", bordered: false }, () => es.reviewStep.noCostChip)
   if (line.isCostEstimated) return h(NTag, { round: true, size: "small", type: "warning", bordered: false }, () => es.reviewStep.costEstimatedChip)
@@ -77,6 +98,7 @@ const columns: DataTableColumns<EditableLine> = [
         h(NText, null, () => entry.line.productName),
         h(NText, { depth: 3, style: { fontSize: "11px" } }, () => es.reviewStep.packMeta(entry.line.packSize, entry.line.category)),
         h(NFlex, { size: 4 }, () => [
+          ...levelChips(entry.line),
           costChip(entry.line),
           entry.line.isCutByBudget ? h(NTag, { round: true, size: "small", type: "warning", bordered: false }, () => es.reviewStep.cutChip) : null,
           wizard.ownerTouched.has(entry.line.productId)
@@ -86,14 +108,42 @@ const columns: DataTableColumns<EditableLine> = [
       ]),
   },
   {
-    key: "brand",
-    title: es.reviewStep.header.brand,
-    sorter: (left, right) => (left.line.brandName ?? "").localeCompare(right.line.brandName ?? "", "es"),
-    render: (entry) => entry.line.brandName ?? es.reviewStep.noBrand,
+    key: "levels",
+    title: es.reviewStep.header.levels,
+    align: "center",
+    render: (entry) => {
+      const position = entry.line.stockPosition
+      return h(NText, { depth: 3, class: "tabular-nums" }, () =>
+        position === null ? "—" : es.reviewStep.levels(position.base, position.reorderPoint, position.tope),
+      )
+    },
   },
-  { key: "sold", title: es.reviewStep.header.sold, align: "right", render: (entry) => entry.line.unitsSold },
-  { key: "stock", title: es.reviewStep.header.stock, align: "right", render: (entry) => entry.line.stockToDiscount },
-  { key: "suggested", title: es.reviewStep.header.suggested, align: "right", render: (entry) => entry.line.suggestedMaximumUnits },
+  {
+    key: "moved",
+    title: es.reviewStep.header.moved,
+    align: "right",
+    sorter: (left, right) => left.line.unitsSold - right.line.unitsSold,
+    render: (entry) => entry.line.stockPosition?.movedUnits ?? entry.line.unitsSold,
+  },
+  {
+    key: "stock",
+    title: es.reviewStep.header.estimatedStock,
+    align: "right",
+    sorter: (left, right) => (left.line.stockPosition?.unitsAboveBase ?? 0) - (right.line.stockPosition?.unitsAboveBase ?? 0),
+    render: (entry) => {
+      const position = entry.line.stockPosition
+      if (position === null || position.estimatedStock === null) return h(NText, { depth: 3 }, () => "—")
+      return h(NText, { type: position.status === "below_base" ? "error" : undefined, class: "tabular-nums" }, () =>
+        String(position.estimatedStock),
+      )
+    },
+  },
+  {
+    key: "toTope",
+    title: es.reviewStep.header.toTope,
+    align: "right",
+    render: (entry) => entry.line.stockPosition?.unitsToTope ?? entry.line.suggestedMaximumUnits,
+  },
   {
     key: "final",
     title: es.reviewStep.header.final,
@@ -117,6 +167,7 @@ const columns: DataTableColumns<EditableLine> = [
           showButton: false,
           size: "small",
           style: { width: "72px" },
+          inputProps: unitsInputProps({ "aria-label": entry.line.productName }),
           "onUpdate:value": (value: number | null) => applyUnits(entry, value ?? 0),
         }),
         h(NButton, {
@@ -140,11 +191,11 @@ const columns: DataTableColumns<EditableLine> = [
         precision: 0,
         showButton: false,
         size: "small",
-        formatter: moneyFormatter,
-        parser: moneyParser,
+        format: moneyFormatter,
+        parse: moneyParser,
         status: entry.line.hasNoCost ? "error" : entry.line.isCostEstimated ? "warning" : undefined,
         disabled: wizard.suggestionLoading,
-        inputProps: { "aria-label": es.reviewStep.unitCostInput(entry.line.productName) },
+        inputProps: moneyInputProps({ "aria-label": es.reviewStep.unitCostInput(entry.line.productName) }),
         "onUpdate:value": (value: number | null) => {
           costDrafts.value = { ...costDrafts.value, [entry.line.productId]: value }
         },
@@ -185,6 +236,18 @@ async function handleConfirm(): Promise<void> {
       <p class="text-sm text-surface-600">{{ es.reviewStep.hint }}</p>
       <n-tag round :bordered="false">{{ totalLabel(editableLines.length, "product") }}</n-tag>
     </n-flex>
+
+    <!-- Qué permitió la plata (regla del dueño: base, tope o hasta donde alcance) -->
+    <n-alert
+      v-if="wizard.suggestion.budgetTier"
+      :type="wizard.suggestion.budgetTier === 'tope' ? 'success' : wizard.suggestion.budgetTier === 'between_base_and_tope' ? 'info' : 'warning'"
+      :bordered="false"
+    >
+      {{ es.reviewStep.tierMessages[wizard.suggestion.budgetTier] }}
+      <template v-if="(wizard.agentDecision?.belowBaseCount ?? 0) > 0">
+        {{ es.reviewStep.belowBaseAlert(wizard.agentDecision!.belowBaseCount) }}
+      </template>
+    </n-alert>
 
     <n-alert
       v-if="wizard.suggestion.estimatedCostLineCount > 0 || wizard.suggestion.noCostLineCount > 0"

@@ -53,6 +53,34 @@ export interface SuggestionLine {
   coverageRatio: number
   isCutByBudget: boolean
   isAdjustedByOwner: boolean
+  /** Modelo de niveles (B < PD < T); null en los modos anteriores. */
+  stockPosition: StockPositionItem | null
+}
+
+export type StockStatus = "below_base" | "at_base" | "above_base" | "no_levels"
+export type LevelReached = "tope" | "base" | "partial" | "none"
+export type BudgetTier = "tope" | "between_base_and_tope" | "below_base" | "not_even_one_pack" | "nothing_to_order"
+
+export interface StockPositionItem {
+  base: number | null
+  reorderPoint: number | null
+  tope: number | null
+  /** CM: vendido desde la última entrega. */
+  movedUnits: number
+  /** EA = PD − (B + CM), con signo. */
+  unitsAboveBase: number | null
+  estimatedStock: number | null
+  status: StockStatus
+  unitsToBase: number
+  unitsToTope: number
+  reached: LevelReached
+}
+
+export interface AgentDecisionItem {
+  status: string
+  budgetTier: BudgetTier | null
+  belowBaseCount: number
+  budgetCoversMaximum: boolean
 }
 
 export interface SuggestionGroup {
@@ -66,7 +94,7 @@ export interface StatusExplanation {
   params: Record<string, number | string>
 }
 
-export type ReplenishmentModeValue = "replenish_sold" | "fill_to_target" | "fill_to_base"
+export type ReplenishmentModeValue = "replenish_sold" | "fill_to_target" | "fill_to_base" | "levels"
 
 export interface SuggestionResponse {
   supplier: {
@@ -85,6 +113,7 @@ export interface SuggestionResponse {
   finalOrderCost: number
   remainingBudget: number
   status: string
+  budgetTier: BudgetTier | null
   estimatedCostLineCount: number
   noCostLineCount: number
   statusExplanation: StatusExplanation
@@ -121,6 +150,7 @@ export interface OrderBudgetItem {
 export interface BuildSuggestionResponse {
   suggestion: SuggestionResponse
   budget: OrderBudgetItem
+  decision: AgentDecisionItem
 }
 
 export interface StoreProfileItem {
@@ -147,8 +177,12 @@ export interface DailyCashItem {
 
 export interface ConfirmOrderResponse {
   order: PurchaseOrderItem
+  /** El vendedor entrega en el acto: el pedido quedó recibido al confirmar. */
+  received: boolean
+  paid: boolean
   suggestion: SuggestionResponse
   budget: OrderBudgetItem
+  decision: AgentDecisionItem
   dailyCash: DailyCashItem
 }
 
@@ -169,15 +203,23 @@ export interface ProductItem {
   packSize: number
   unitCost: number
   costSource: "owner" | "sales_report" | "estimated"
+  /** Tope (T). */
   maxStockUnits: number | null
+  /** Base (B). */
+  minStockUnits: number | null
+  /** Punto de pedido (PD). */
+  reorderPointUnits: number | null
   stockUnits: number
   isStockReliable: boolean
   isEstimated: boolean
 }
 
 export interface ProductSettingsPatch {
-  maxStockUnits?: number
+  maxStockUnits?: number | null
+  minStockUnits?: number | null
+  reorderPointUnits?: number | null
   unitCost?: number
+  salePrice?: number
   packSize?: number
   isEstimated?: boolean
   costSource?: "owner" | "sales_report" | "estimated"
@@ -234,4 +276,68 @@ export interface DataQualityIssueItem {
   productId: string | null
   originalValue: string | null
   description: string
+}
+/** Producto vencido separado para que el proveedor lo cambie (GET /expired-exchanges). */
+export interface ExpiredExchangeItem {
+  id: string
+  productId: string
+  productName: string
+  barcode: string
+  supplierId: string | null
+  supplierName: string | null
+  units: number
+  createdAt: string
+}
+
+/** Bandeja del día (GET /inbox/today). */
+export interface InboxReadySummary {
+  totalCost: number
+  productCount: number
+  budgetTier: BudgetTier | null
+  belowBaseCount: number
+}
+
+export interface InboxVendorItem {
+  sellerId: string
+  sellerName: string | null
+  supplierId: string
+  supplierName: string
+  deliversSameDay: boolean
+  expectedDeliveryDay: string
+  orderToday: { id: string; status: "confirmed" | "received"; totalCost: number; pendingAmount: number } | null
+  ready: InboxReadySummary | null
+  readyError: string | null
+}
+
+export interface InboxArrivalItem {
+  orderId: string
+  supplierId: string
+  supplierName: string
+  totalCost: number
+  orderDay: string
+  expectedDeliveryDay: string
+}
+
+export interface InboxDebtItem {
+  supplierId: string
+  supplierName: string
+  amount: number
+}
+
+/** Un día de los próximos, con cuántos proveedores vienen (tags de la bandeja). */
+export interface InboxDayItem {
+  day: string
+  isToday: boolean
+  vendorCount: number
+}
+
+export interface InboxItem {
+  /** Día cuyos proveedores se muestran. */
+  day: string
+  /** Hoy en la tienda (la caja, las llegadas y las deudas son de hoy). */
+  today: string
+  cash: DailyCashItem
+  vendors: InboxVendorItem[]
+  arrivals: InboxArrivalItem[]
+  debts: InboxDebtItem[]
 }

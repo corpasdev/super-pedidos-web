@@ -1,5 +1,5 @@
 import { ref, watch } from "vue"
-import { defineStore } from "pinia"
+import { acceptHMRUpdate, defineStore } from "pinia"
 
 export type ThemeMode = "light" | "dark"
 
@@ -36,3 +36,6 @@ export const useThemeStore = defineStore("theme", () => {
 
   return { mode }
 })
+
+// Recarga en caliente (Vite): reemplaza el store en memoria cuando cambia este archivo, sin recargar la página.
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useThemeStore, import.meta.hot))
