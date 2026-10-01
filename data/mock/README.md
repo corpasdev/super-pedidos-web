@@ -4,11 +4,22 @@ Datos de prueba que simulan un lunes en la tienda: los 9 proveedores del calenda
 
 Los productos, su proveedor, precios, costos y niveles B/PD/T son los de Supabase (`productos-supabase.json`). La rotación parte del Excel modelo `data/ventas-16-al-23-sept.xlsx`. Las ventas de la semana, los vendedores, la caja y las deudas son inventados.
 
-## Verlo en la web
+## Simular el software completo
 
-Abre la web con `?mock` al final de la dirección, por ejemplo `http://localhost:5173/?mock`. Arriba sale el aviso «Datos de prueba». El modo se recuerda en esa pestaña; `?mock=0` lo apaga. También se puede dejar fijo con `VITE_MOCK=1` en `apps/web/.env`.
+```sh
+npm run dev:mock
+```
 
-En modo de prueba la vista lee estos JSON en lugar de la API. Confirmar un pedido o cambiar la caja solo cambia la memoria de la página (se pierde al recargar) y nada llega a Supabase. Subir o quitar el Excel no funciona en este modo. Las demás vistas siguen leyendo la API real, pero no pueden guardar.
+Abre la web en modo de prueba: entra sola con un dueño de prueba (sin iniciar sesión) y **no necesita la API ni Supabase**. Arriba de cada vista sale el aviso «Modo de prueba».
+
+Qué se puede hacer:
+- **Sugeridos:** ver los proveedores del lunes, abrir el pedido de cada uno, ajustar cantidades y precios, confirmar (descuenta la caja y queda en «Le debes» si no se paga), corregir la caja, anotar y marcar vencidos para cambio.
+- **Productos:** buscar, editar unidades actuales, precios, base y tope, y crear productos.
+- **Proveedores:** buscar, ver los productos de cada uno, editar mínimo y tope, y crear proveedores.
+
+Todo vive en la memoria de la página: al recargar vuelve al estado inicial. Lo que no se simula (subir el Excel, el logo de la tienda) muestra un aviso.
+
+Otras formas de activarlo: `?mock` al final de la dirección con `npm run dev:web` (se recuerda en la pestaña; `?mock=0` lo apaga), o `VITE_MOCK=1` en `apps/web/.env`.
 
 ## Archivos
 
@@ -21,6 +32,8 @@ En modo de prueba la vista lee estos JSON en lugar de la API. Confirmar un pedid
 | `api/inbox-days.json` | Respuesta de `GET /inbox/days`. |
 | `api/daily-cash-today.json` | Respuesta de `GET /daily-cash/today`. |
 | `api/sales-report-latest.json` | Respuesta de `GET /sales-reports/latest`. |
+| `api/products.json` / `api/suppliers.json` | Catálogo completo de la simulación: los productos y proveedores que ven Productos y Proveedores. |
+| `api/expired-exchanges.json` | Dos vencidos ya anotados para ver la lista llena. |
 | `api/suggestions/<proveedor>.json` | Respuesta de `POST` del sugerido de cada proveedor (lo que se ve en el panel al tocar una card). |
 
 ## Qué casos cubre
@@ -42,6 +55,7 @@ El sugerido se calcula con el motor real (`planSuggestion` de `packages/order-ag
 ```sh
 npm run build --workspace packages/order-agent   # si cambió el motor
 # si cambiaron los niveles en Supabase, volver a exportar productos-supabase.json (ver abajo)
+# necesita el Excel real data/ventas-16-al-23-sept.xlsx (no se sube a git): sin él, usa los JSON ya generados
 node data/mock/generar.mjs                       # hoy = próximo lunes
 node data/mock/generar.mjs 2026-10-05            # hoy = esa fecha (debería ser lunes)
 ```

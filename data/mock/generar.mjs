@@ -409,6 +409,99 @@ const salesReport = {
   totalUnits: catalog.reduce((sum, product) => sum + product.weeklyUnits, 0),
 }
 
+// ───────────────────────── Catálogo completo (Productos y Proveedores) ─────────────────────────
+const supplierIdByName = new Map(SUPPLIERS.map((supplier) => [supplier.name, supplier.id]))
+const handpicked = new Map(SUPPLIERS.flatMap((supplier) => (supplier.barcodes ?? []).map((barcode) => [barcode, supplier])))
+const catalogById = new Map(catalog.map((product) => [product.productId, product]))
+
+/** Todos los productos de los proveedores del mock (no solo los del sugerido), como GET /products. */
+const productList = snapshot
+  .filter((row) => handpicked.has(row.barcode) || supplierIdByName.has(row.supplier_name.toUpperCase()))
+  .map((row) => {
+    const supplier = handpicked.get(row.barcode) ?? SUPPLIERS.find((item) => item.id === supplierIdByName.get(row.supplier_name.toUpperCase()))
+    const id = `prod-${row.barcode}`
+    const inSuggestion = catalogById.get(id)
+    // Tras la entrega el producto queda en su PD; los del sugerido ya vendieron CM esta semana.
+    const stockUnits = Math.max(0, (row.reorder_point ?? 0) - (inSuggestion?.weeklyUnits ?? 0))
+    return {
+      id,
+      barcode: row.barcode,
+      name: row.name,
+      category: row.category,
+      salePrice: row.sale_price,
+      supplierId: supplier.id,
+      supplierName: supplier.name,
+      brandName: null,
+      packSize: row.pack_size,
+      unitCost: row.unit_cost,
+      costSource: "sales_report",
+      maxStockUnits: row.tope,
+      minStockUnits: row.base,
+      reorderPointUnits: row.reorder_point,
+      stockUnits,
+      isStockReliable: false,
+      isEstimated: false,
+    }
+  })
+  .sort((a, b) => a.name.localeCompare(b.name, "es"))
+
+/** Proveedores como GET /suppliers: los 9 del lunes y ALPINA (sin calendario, con deuda). */
+const supplierList = [
+  ...SUPPLIERS.map((supplier) => ({
+    id: supplier.id,
+    name: supplier.name,
+    taxId: null,
+    contactEmail: null,
+    hasSchedule: true,
+    orderWeekday: 1,
+    deliveryWeekday: supplier.deliveryWeekday,
+    visitFrequencyDays: 7,
+    deliveryLeadDays: supplier.deliveryWeekday - 1,
+    nextOrderDate: TODAY,
+    lastDeliveryDate: PERIOD_START,
+    isVisitingToday: true,
+    minimumOrderAmount: 20_000,
+    maximumOrderAmount: MAX_ORDER,
+    isEstimated: false,
+    productCount: productList.filter((product) => product.supplierId === supplier.id).length,
+    lastOrderAt: `${PERIOD_START}T10:00:00.000Z`,
+  })),
+  {
+    id: "sup-alpina",
+    name: "ALPINA",
+    taxId: null,
+    contactEmail: null,
+    hasSchedule: false,
+    orderWeekday: null,
+    deliveryWeekday: null,
+    visitFrequencyDays: null,
+    deliveryLeadDays: 0,
+    nextOrderDate: null,
+    lastDeliveryDate: null,
+    isVisitingToday: false,
+    minimumOrderAmount: 20_000,
+    maximumOrderAmount: MAX_ORDER,
+    isEstimated: true,
+    productCount: 0,
+    lastOrderAt: null,
+  },
+].sort((a, b) => a.name.localeCompare(b.name, "es"))
+
+/** Un par de vencidos ya anotados, para ver la lista llena (uno de un proveedor que viene hoy). */
+const pick2 = (supplierId) => productList.find((product) => product.supplierId === supplierId)
+const expiredSeed = [pick2("sup-bimbo"), pick2("sup-colombina")]
+  .filter(Boolean)
+  .map((product, index) => ({
+    id: `mock-expired-${index + 1}`,
+    productId: product.id,
+    productName: product.name,
+    barcode: product.barcode,
+    supplierId: product.supplierId,
+    supplierName: product.supplierName,
+    units: index + 2,
+    createdAt: `${addDays(TODAY, -2)}T09:00:00.000Z`,
+  }))
+
 // ───────────────────────── Escritura ─────────────────────────
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`
 const write = (relative, content) => {
@@ -424,12 +517,16 @@ write("api/inbox-today.json", json({ inbox }))
 write("api/inbox-days.json", json({ days }))
 write("api/daily-cash-today.json", json({ dailyCash: cash }))
 write("api/sales-report-latest.json", json({ report: salesReport }))
+write("api/products.json", json({ products: productList }))
+write("api/suppliers.json", json({ suppliers: supplierList }))
+write("api/expired-exchanges.json", json({ exchanges: expiredSeed }))
 for (const [supplierId, response] of Object.entries(suggestions)) {
   write(`api/suggestions/${supplierId.slice(4)}.json`, json(response))
 }
 
 console.log(`Mock de Sugeridos para ${TODAY} (ventas del ${PERIOD_START} al ${addDays(TODAY, -1)})`)
 console.log(`  ventas-mock.xlsx: ${excelRows.length - 1} filas, ${salesReport.totalUnits} unidades`)
+console.log(`  catálogo: ${productList.length} productos de ${supplierList.length} proveedores`)
 console.log(`  caja: ${OPENING_CASH} abierta, ${spentToday} pedida, ${remainingCash} queda · presupuesto por pedido ${budget}`)
 for (const vendor of vendors) {
   const state = vendor.orderToday ? `pedido hecho (${vendor.orderToday.status})` : `${vendor.ready.productCount} productos · ${vendor.ready.budgetTier}`
