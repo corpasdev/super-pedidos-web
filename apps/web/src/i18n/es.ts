@@ -74,12 +74,6 @@ export const es = {
     deliveryOn: (day: string): string => `Entrega: ${day}`,
     products: (count: number): string => `${count} producto${count === 1 ? "" : "s"}`,
     belowBase: (count: number): string => `${count} bajo la base`,
-    tiers: {
-      tope: "Todo llega al tope",
-      below_base: "No alcanzó para la base de todos",
-      not_even_one_pack: "No alcanza para ningún producto",
-      nothing_to_order: "Nada que pedir: no se ha movido nada desde su última entrega",
-    } as Record<string, string>,
     review: "Revisar",
     confirm: "Confirmar",
     confirmAndReceive: "Confirmar y recibir",
