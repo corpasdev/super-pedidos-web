@@ -136,6 +136,20 @@ export const es = {
     loadError: "No se pudo cargar la bandeja.",
   },
   orderReview: {
+    table: {
+      product: "Producto",
+      status: "Estado",
+      sold: "Vendido",
+      stock: "Hay → llega a",
+      levels: "Base · PD · Tope",
+      order: "Pedir",
+      cost: "Precio compra",
+      subtotal: "Subtotal",
+      reached: "Alcance",
+      stockArrow: (stock: number, after: number): string => `${stock} → ${after}`,
+      statusChips: { below_base: "Urgente", at_base: "En la base", above_base: "Sobre la base", no_levels: "Sin niveles" } as Record<string, string>,
+      empty: "No hay productos para pedirle a este proveedor.",
+    },
     back: "← Pedidos de hoy",
     subtitle: (seller: string, delivery: string, budget: string): string =>
       [seller, delivery, `plata para este pedido ${budget}`].filter((part) => part !== "").join(" · "),

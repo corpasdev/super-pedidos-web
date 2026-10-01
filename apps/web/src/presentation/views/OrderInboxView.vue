@@ -14,7 +14,7 @@ import SalesUploadPanel from "../components/inbox/SalesUploadPanel.vue"
 import VendorCard from "../components/inbox/VendorCard.vue"
 import VendorHeader from "../components/inbox/VendorHeader.vue"
 import VendorSummary from "../components/inbox/VendorSummary.vue"
-import LevelRow from "../components/inbox/LevelRow.vue"
+import SuggestionTable from "../components/inbox/SuggestionTable.vue"
 import ConfirmSheet from "../components/inbox/ConfirmSheet.vue"
 import ExpiredExchangesCard from "../components/inbox/ExpiredExchangesCard.vue"
 
@@ -209,7 +209,7 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
   </div>
 
   <!-- Pedido del proveedor elegido: se edita y se confirma en un panel lateral -->
-  <n-drawer :show="openVendor !== null" placement="right" :width="560" :style="{ maxWidth: '100vw' }" @update:show="closeDrawer">
+  <n-drawer :show="openVendor !== null" placement="right" :width="1100" :style="{ maxWidth: '100vw' }" @update:show="closeDrawer">
     <n-drawer-content v-if="openVendor" closable :native-scrollbar="false">
       <template #header>
         <VendorHeader :vendor="openVendor" />
@@ -217,14 +217,13 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
       <n-spin :show="wizard.suggestionLoading">
         <n-flex vertical :size="10">
           <VendorSummary :vendor="openVendor" :total="editor.total.value" :product-count="editor.productCount.value" />
-          <LevelRow
-            v-for="line in editor.lines.value"
-            :key="line.productId"
-            :line="line"
-            :units="editor.unitsOf(line)"
+          <!-- Pedido en tabla: del más urgente al menos, con sus alertas -->
+          <SuggestionTable
+            :lines="editor.lines.value"
+            :units-of="editor.unitsOf"
             :disabled="wizard.suggestionLoading"
-            @step="(delta: number) => editor.step(line, delta)"
-            @price="(cost: number) => price(line.productId, cost)"
+            @step="(line, delta) => editor.step(line, delta)"
+            @price="(line, cost) => price(line.productId, cost)"
           />
         </n-flex>
       </n-spin>
