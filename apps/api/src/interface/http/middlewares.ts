@@ -5,6 +5,10 @@ import type { Database } from "@agente-pedidos/database-types"
 import { logger } from "../../infrastructure/logging/logger.js"
 import { StoreLogoRejectedError } from "../../application/StoreProfileService.js"
 import { OrderNotFoundError } from "../../application/OrderPaymentService.js"
+import { InvalidLevelsError } from "../../application/ProductSettingsService.js"
+import { DuplicateCatalogEntryError, InvalidNewLevelsError } from "../../application/CatalogEntryService.js"
+import { ExpiredExchangeNotFoundError } from "../../application/ExpiredExchangeService.js"
+import { SalesReportNotFoundError } from "../../application/SalesReportImportService.js"
 
 export interface AuthenticatedRequest extends Request {
   ownerUserId: string
@@ -61,6 +65,26 @@ export const errorHandler = (error: unknown, _req: Request, res: Response, _next
     res.status(400).json({
       error: { code: "invalid_input", message: "Algunos campos no son válidos.", issues: (error as { issues?: unknown }).issues ?? null },
     })
+    return
+  }
+  if (error instanceof SalesReportNotFoundError) {
+    res.status(404).json({ error: { code: error.code, message: error.message } })
+    return
+  }
+  if (error instanceof ExpiredExchangeNotFoundError) {
+    res.status(404).json({ error: { code: error.code, message: error.message } })
+    return
+  }
+  if (error instanceof DuplicateCatalogEntryError) {
+    res.status(409).json({ error: { code: error.code, message: error.message } })
+    return
+  }
+  if (error instanceof InvalidNewLevelsError) {
+    res.status(400).json({ error: { code: error.code, message: error.message } })
+    return
+  }
+  if (error instanceof InvalidLevelsError) {
+    res.status(400).json({ error: { code: error.code, message: error.message } })
     return
   }
   if (error instanceof OrderNotFoundError) {

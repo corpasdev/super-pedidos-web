@@ -1,15 +1,27 @@
-import { CostSource, Money, PackSize } from "@agente-pedidos/order-agent"
+import { CostSource, Money, PackSize, levelsProblem } from "@agente-pedidos/order-agent"
 import type { Product } from "@agente-pedidos/order-agent"
 import type { SupabaseProductRepository } from "../infrastructure/supabase/repositories/SupabaseProductRepository.js"
 import type { BrandRepository } from "./ports.js"
 
 export interface UpdateProductSettingsInput {
+  /** Tope (T). */
   maxStockUnits?: number | null
+  /** Base (B). */
+  minStockUnits?: number | null
+  /** Punto de pedido (PD). */
+  reorderPointUnits?: number | null
   unitCost?: number
+  /** Precio de venta de la tienda. */
+  salePrice?: number
   packSize?: number
   isEstimated?: boolean
   costSource?: "owner" | "sales_report" | "estimated"
   brandName?: string | null
+}
+
+/** Los niveles no cumplen 0 < B < PD < T. */
+export class InvalidLevelsError extends Error {
+  readonly code = "invalid_levels"
 }
 
 export interface UpdatedProduct {
@@ -17,7 +29,7 @@ export interface UpdatedProduct {
   brandName: string | null
 }
 
-/** Caso de uso: el dueño corrige el producto (HU7): empaque, costo, tope de stock, marca, stock contado. */
+/** Caso de uso: el dueño corrige el producto (HU7): precios de compra y venta, empaque, niveles, marca, stock contado. */
 export class ProductSettingsService {
   constructor(
     private readonly productRepository: SupabaseProductRepository,
@@ -28,8 +40,20 @@ export class ProductSettingsService {
     const product = await this.productRepository.findById(storeId, productId)
     if (product === null) throw new Error(`El producto ${productId} no existe en esta tienda.`)
 
+    const nextLevels = {
+      base: changes.minStockUnits === undefined ? product.minStockUnits : changes.minStockUnits,
+      reorderPoint: changes.reorderPointUnits === undefined ? product.reorderPointUnits : changes.reorderPointUnits,
+      tope: changes.maxStockUnits === undefined ? product.maxStockUnits : changes.maxStockUnits,
+    }
+    const problem = levelsProblem(nextLevels)
+    if (problem !== null) throw new InvalidLevelsError(problem)
+
+    if (changes.salePrice !== undefined) product.changeSalePrice(Money.fromPesos(changes.salePrice))
+
     product.updateSettings({
-      maxStockUnits: changes.maxStockUnits === undefined ? product.maxStockUnits : changes.maxStockUnits,
+      maxStockUnits: nextLevels.tope,
+      minStockUnits: nextLevels.base,
+      reorderPointUnits: nextLevels.reorderPoint,
       unitCost: changes.unitCost === undefined ? product.unitCost : Money.fromPesos(changes.unitCost),
       costSource:
         changes.unitCost === undefined && changes.costSource === undefined

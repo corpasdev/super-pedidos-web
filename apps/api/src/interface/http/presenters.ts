@@ -1,4 +1,5 @@
 import type {
+  AgentDecision,
   DataQualityIssue,
   OrderLine,
   OrderSuggestion,
@@ -49,7 +50,12 @@ export const productPresenter = (product: Product, brandName: string | null = nu
   packSize: product.packSize.units,
   unitCost: product.unitCost.pesos,
   costSource: product.costSource,
+  /** Tope (T). */
   maxStockUnits: product.maxStockUnits,
+  /** Base (B). */
+  minStockUnits: product.minStockUnits,
+  /** Punto de pedido (PD). */
+  reorderPointUnits: product.reorderPointUnits,
   stockUnits: product.stockUnits,
   isStockReliable: product.isStockReliable,
   isEstimated: product.isEstimated,
@@ -103,6 +109,22 @@ export const orderLinePresenter = (line: OrderLine) => ({
   finalLineCost: line.finalLineCost.pesos,
   coverageRatio: Math.round(line.coverageRatio * 1000) / 1000,
   isCutByBudget: line.isCutByBudget,
+  /** Modelo de niveles: B/PD/T, CM, EA (con signo), existencia estimada y hasta dónde llegó la plata. */
+  stockPosition:
+    line.stockPosition === null
+      ? null
+      : {
+          base: line.stockPosition.levels.base,
+          reorderPoint: line.stockPosition.levels.reorderPoint,
+          tope: line.stockPosition.levels.tope,
+          movedUnits: line.stockPosition.movedUnits,
+          unitsAboveBase: line.stockPosition.unitsAboveBase,
+          estimatedStock: line.stockPosition.estimatedStock,
+          status: line.stockPosition.status,
+          unitsToBase: line.stockPosition.unitsToBase,
+          unitsToTope: line.stockPosition.unitsToTope,
+          reached: line.stockPosition.reached,
+        },
   isAdjustedByOwner: line.isAdjustedByOwner,
 })
 
@@ -123,6 +145,7 @@ export const orderSuggestionPresenter = (suggestion: OrderSuggestion) => ({
   finalOrderCost: suggestion.finalOrderCost.pesos,
   remainingBudget: suggestion.remainingBudget.pesos,
   status: suggestion.status,
+  budgetTier: suggestion.budgetTier,
   estimatedCostLineCount: suggestion.estimatedCostLineCount,
   noCostLineCount: suggestion.noCostLineCount,
   statusExplanation: {
@@ -160,3 +183,9 @@ export const truckDeliveryPresenter = (delivery: TruckDelivery) => ({
 })
 
 export const orderStatusLabel = (status: OrderStatus): string => status
+export const agentDecisionPresenter = (decision: AgentDecision) => ({
+  status: decision.choice,
+  budgetTier: decision.budgetTier,
+  belowBaseCount: decision.belowBaseCount,
+  budgetCoversMaximum: decision.budgetCoversMaximum,
+})

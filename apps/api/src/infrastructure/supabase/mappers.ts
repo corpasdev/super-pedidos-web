@@ -105,6 +105,8 @@ export const productFromRows = (
       mapCostSource(settingsRow?.cost_source ?? "estimated"),
       PackSize.of(settingsRow?.pack_size ?? 1),
       settingsRow?.is_estimated ?? true,
+      settingsRow?.min_stock_units ?? null,
+      settingsRow?.reorder_point_units ?? null,
     ),
     new StockLevel(productRow.stock_units, productRow.is_stock_reliable),
   )
