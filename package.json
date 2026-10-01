@@ -14,7 +14,6 @@
     "lint": "eslint .",
     "dev:api": "npm run dev --workspace apps/api",
     "dev:web": "npm run dev --workspace apps/web",
-    "dev:mock": "npm run dev:mock --workspace apps/web",
     "build": "npm run build --workspaces --if-present",
     "prepare": "husky"
   },
