@@ -85,6 +85,7 @@ export const es = {
     arrivalFrom: (day: string, distributor: string): string => `pedido del ${day} · ${distributor}`,
     reload: "Actualizar",
     cashShort: "Caja",
+    cashToday: "Caja hoy",
     cashEdit: "Corregir el efectivo de la caja",
     cashCancel: "Cancelar",
     cashEditHint: "Enter para guardar · Esc para cancelar",

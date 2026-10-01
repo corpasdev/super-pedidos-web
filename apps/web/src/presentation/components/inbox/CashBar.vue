@@ -65,6 +65,8 @@ function onKeyup(event: KeyboardEvent): void {
 }
 
 const light = "#FDFDFD"
+/** Rótulo «CAJA HOY» debajo del número. */
+const labelStyle = { color: light, opacity: 0.8, fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const }
 /** El campo se ve igual que el número: sin fondo ni borde, mismo tamaño y color. */
 const bareInput = {
   peers: {
@@ -89,10 +91,6 @@ const bareInput = {
 <template>
   <n-card :bordered="false" :style="{ background: palette.brandDeep, height: '100%' }" :content-style="{ padding: '16px 18px' }">
     <n-flex vertical :size="10" justify="space-between" :style="{ height: '100%' }">
-      <n-text :style="{ color: light, opacity: 0.8, fontSize: '12px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }">
-        {{ es.inbox.cashShort }}
-      </n-text>
-
       <n-flex align="center" :size="6" :wrap="false">
         <n-input-number
           v-if="editing"
@@ -126,11 +124,12 @@ const bareInput = {
       </n-text>
       <n-flex v-else-if="hasCash" vertical :size="6">
         <n-progress type="line" :percentage="spentPercent" :show-indicator="false" :height="8" :color="palette.accent" rail-color="rgba(253,253,253,0.18)" />
-        <n-text class="tabular-nums" :style="{ color: light, opacity: 0.85, fontSize: '12px' }">
-          {{ es.inbox.cashSpentOf(formatMoney(cash!.spentAmount), formatMoney(cash!.openingAmount ?? 0)) }}
-        </n-text>
+        <n-text :style="labelStyle">{{ es.inbox.cashToday }}</n-text>
       </n-flex>
-      <n-text v-else :style="{ color: light, opacity: 0.85, fontSize: '12px' }">{{ es.inbox.cashMissingShort }}</n-text>
+      <n-flex v-else vertical :size="2">
+        <n-text :style="labelStyle">{{ es.inbox.cashToday }}</n-text>
+        <n-text :style="{ color: light, opacity: 0.85, fontSize: '12px' }">{{ es.inbox.cashMissingShort }}</n-text>
+      </n-flex>
     </n-flex>
   </n-card>
 </template>
