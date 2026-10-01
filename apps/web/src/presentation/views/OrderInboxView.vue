@@ -183,7 +183,7 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
               <n-text class="tabular-nums" :style="{ fontWeight: 700, whiteSpace: 'nowrap' }">{{ formatMoney(debt.amount) }}</n-text>
             </n-flex>
             <n-flex v-for="invoice in debt.invoices" :key="invoice.orderId" justify="space-between" :size="8" :wrap="false">
-              <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.inbox.invoiceOf(formatShortDay(invoice.orderDay), formatMoney(invoice.totalCost)) }}</n-text>
+              <n-text depth="3" :style="{ fontSize: '12px' }">{{ formatShortDay(invoice.orderDay) }}</n-text>
               <n-text depth="3" class="tabular-nums" :style="{ fontSize: '12px', whiteSpace: 'nowrap' }">
                 {{ es.inbox.invoiceBalance(formatMoney(invoice.pendingAmount)) }}
               </n-text>
