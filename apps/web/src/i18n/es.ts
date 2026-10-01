@@ -29,6 +29,7 @@ export const es = {
   },
   shell: {
     brand: "SuperPedido",
+    logoLabel: "Controllist",
     greeting: (name: string): string => `Hola, ${name}`,
     greetingFallback: "Hola",
     pendingOrders: (count: number): string =>

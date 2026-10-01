@@ -24,6 +24,7 @@ import { useStoreProfileStore } from "../../stores/storeProfileStore"
 import { palette, radius } from "../../theme/naiveOverrides"
 import { es } from "../../i18n/es"
 import { useMediaQuery } from "../composables/useMediaQuery"
+import BrandLogo from "../components/BrandLogo.vue"
 
 const isDesktop = useMediaQuery("(min-width: 768px)")
 const router = useRouter()
@@ -180,13 +181,9 @@ watch(
       >
         <n-flex vertical justify="space-between" :style="{ height: '100%' }" :wrap="false">
           <n-flex vertical :size="56">
-            <!-- Logo: anillo verde profundo con núcleo lima; contraído queda solo el anillo -->
-            <n-flex align="center" :justify="collapsed ? 'center' : 'start'" :size="10" :wrap="false" :style="{ height: '56px' }">
-              <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true" :style="{ flexShrink: 0 }">
-                <circle cx="13" cy="13" r="10" :style="{ fill: 'none', stroke: tone.data, strokeWidth: 5 }" />
-                <circle cx="13" cy="13" r="4.5" :style="{ fill: palette.accent }" />
-              </svg>
-              <n-text v-if="!collapsed" strong :style="{ fontSize: '18px', fontWeight: 600, whiteSpace: 'nowrap' }">{{ es.shell.brand }}</n-text>
+            <!-- Logo de la marca: extendido con el menú abierto, solo el símbolo con el menú contraído -->
+            <n-flex align="center" :justify="collapsed ? 'center' : 'start'" :wrap="false" :style="{ height: '56px' }">
+              <BrandLogo :variant="collapsed ? 'compact' : 'extended'" :height="collapsed ? 34 : 38" />
             </n-flex>
 
             <!-- Contraído, Naive muestra el nombre de cada opción en un tooltip al pasar el mouse -->
