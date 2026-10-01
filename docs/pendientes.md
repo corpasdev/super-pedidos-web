@@ -8,7 +8,7 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Volver a subir el Excel de ventas (se quitó). Sin él no hay sugeridos.
 
 ## Técnico
-- 73 archivos sin commit desde `67d9887` (commit inicial). Commit y push solo cuando el usuario lo pida.
+- Trabajo subido en la rama `feat/sugeridos-bandeja-y-catalogo` (6 commits sobre `main`). Falta abrir el pull request y unirla a `main` cuando el dueño lo apruebe.
 - Si la API responde 404 en rutas nuevas, reiniciar con `npm run dev:api`.
 
 ## Última tarea hecha
