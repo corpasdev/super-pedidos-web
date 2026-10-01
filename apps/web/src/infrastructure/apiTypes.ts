@@ -286,6 +286,8 @@ export interface ExpiredExchangeItem {
   supplierId: string | null
   supplierName: string | null
   units: number
+  /** Precio de compra del producto (para el total del cambio). */
+  unitCost: number
   createdAt: string
 }
 

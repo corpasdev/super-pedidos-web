@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Database } from "@agente-pedidos/database-types"
+import { estimateUnitCost } from "@agente-pedidos/order-agent"
 
 /** Un producto vencido separado para que el proveedor lo cambie. */
 export interface ExpiredExchange {
@@ -10,6 +11,8 @@ export interface ExpiredExchange {
   supplierId: string | null
   supplierName: string | null
   units: number
+  /** Precio de compra del producto (el del dueño o del Excel; si no hay, el estimado por categoría). */
+  unitCost: number
   createdAt: string
 }
 
@@ -19,8 +22,21 @@ interface ExchangeRow {
   supplier_id: string | null
   units: number
   created_at: string
-  products: { name: string; barcode: string } | null
+  products: {
+    name: string
+    barcode: string
+    sale_price: number
+    category: string
+    product_settings: { unit_cost: number } | { unit_cost: number }[] | null
+  } | null
   suppliers: { name: string } | null
+}
+
+const unitCostOf = (product: ExchangeRow["products"]): number => {
+  if (product === null) return 0
+  const settings = Array.isArray(product.product_settings) ? product.product_settings[0] : product.product_settings
+  const cost = settings?.unit_cost ?? 0
+  return cost > 0 ? cost : estimateUnitCost(product.sale_price, product.category)
 }
 
 const toExchange = (row: ExchangeRow): ExpiredExchange => ({
@@ -31,10 +47,12 @@ const toExchange = (row: ExchangeRow): ExpiredExchange => ({
   supplierId: row.supplier_id,
   supplierName: row.suppliers?.name ?? null,
   units: row.units,
+  unitCost: unitCostOf(row.products),
   createdAt: row.created_at,
 })
 
-const SELECT = "id, product_id, supplier_id, units, created_at, products(name, barcode), suppliers(name)"
+const SELECT =
+  "id, product_id, supplier_id, units, created_at, products(name, barcode, sale_price, category, product_settings(unit_cost)), suppliers(name)"
 
 export class SupabaseExpiredExchangeRepository {
   constructor(private readonly supabase: SupabaseClient<Database>) {}

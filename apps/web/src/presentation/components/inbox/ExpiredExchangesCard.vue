@@ -5,6 +5,7 @@ import { AddOutline, CloseOutline } from "@vicons/ionicons5"
 import { apiClient } from "../../../infrastructure/apiClient"
 import type { ExpiredExchangeItem, ProductItem } from "../../../infrastructure/apiTypes"
 import { es } from "../../../i18n/es"
+import { formatMoney } from "../../../i18n/format"
 import { unitsInputProps } from "../../numericInput"
 
 /**
@@ -144,7 +145,8 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
               </n-flex>
             </n-flex>
             <n-flex :size="2" :wrap="false" align="center">
-              <n-button size="small" secondary :loading="busy.has(exchange.id)" @click="settle(exchange, 'exchanged')">{{ es.inbox.expired.exchanged }}</n-button>
+              <!-- Lo que vale el cambio: unidades × precio de compra -->
+              <n-text class="tabular-nums" :style="{ fontWeight: 700, whiteSpace: 'nowrap' }">{{ formatMoney(exchange.units * exchange.unitCost) }}</n-text>
               <n-button size="small" quaternary circle :aria-label="es.inbox.expired.remove" @click="settle(exchange, 'remove')">
                 <template #icon><n-icon :component="CloseOutline" /></template>
               </n-button>
