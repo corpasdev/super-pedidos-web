@@ -78,17 +78,6 @@ function onKeyup(event: KeyboardEvent): void {
 }
 
 const light = "#FDFDFD"
-const legendStyle = { color: light, opacity: 0.85, fontSize: "12px", whiteSpace: "nowrap" as const }
-const dot = (opacity: number) => ({
-  display: "inline-block",
-  width: "8px",
-  height: "8px",
-  borderRadius: "999px",
-  background: palette.accent,
-  opacity,
-  marginRight: "5px",
-})
-
 /** Rótulo «CAJA HOY» arriba del número. */
 const labelStyle = { color: light, opacity: 0.8, fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const }
 /** El campo se ve igual que el número: sin fondo ni borde, mismo tamaño y color. */
@@ -164,13 +153,6 @@ const bareInput = {
             {{ segment.name }} · {{ formatMoney(segment.amount) }}
           </n-tooltip>
         </div>
-        <n-flex :size="10" :wrap="true" :style="{ rowGap: '2px' }">
-          <n-text v-if="spent > 0" class="tabular-nums" :style="legendStyle">
-            <span :style="dot(1)" />{{ es.inbox.cashSpentShort(formatMoney(spent)) }}
-          </n-text>
-          <n-text class="tabular-nums" :style="legendStyle">{{ es.inbox.cashPlanned(formatMoney(planned), segments.length) }}</n-text>
-          <n-text class="tabular-nums" :style="legendStyle">{{ es.inbox.cashFree(formatMoney(free)) }}</n-text>
-        </n-flex>
       </n-flex>
       <n-text v-else :style="{ color: light, opacity: 0.85, fontSize: '12px' }">{{ es.inbox.cashMissingShort }}</n-text>
     </n-flex>
