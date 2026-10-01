@@ -165,11 +165,12 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
     <div class="lg:col-span-2 lg:col-start-1">
       <n-alert v-if="inbox.error" type="error" :bordered="false" :style="{ marginBottom: '12px' }">{{ inbox.error }}</n-alert>
 
-      <!-- Solo el día actual: la vista siempre muestra a quienes vienen hoy -->
+      <!-- El día que se muestra: hoy, o la próxima visita si hoy no viene nadie -->
       <n-flex align="center" :size="6" :style="{ marginBottom: '12px' }">
         <n-text :style="{ fontSize: '18px', fontWeight: 700, textTransform: 'capitalize' }">
-          {{ formatLongDay(inbox.inbox?.today ?? "") }}
+          {{ formatLongDay(inbox.inbox?.day ?? "") }}
         </n-text>
+        <n-tag v-if="!isSelectedToday" round :bordered="false" type="info">{{ es.inbox.nextVisit }}</n-tag>
         <n-button quaternary circle size="small" :loading="inbox.loading" :aria-label="es.inbox.reload" @click="reload">
           <template #icon><n-icon :component="RefreshOutline" /></template>
         </n-button>

@@ -31,3 +31,4 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Tabla de Proveedores sin «Próxima visita» ni «Último pedido» (ocultas por ahora).
 - «Vencidos para cambio» en Sugeridos (columna derecha, bajo Le debes): tabla expired_exchanges (migración 20261001120000), API /expired-exchanges. Reiniciar la API.
 - Rama `feat/mock-simulacion`: ventas de prueba con los productos de Supabase (`npm run mock:ventas --workspace apps/api`, ver `data/mock/README.md`). Ya cargadas: el lunes 5-oct el agente arma 7 pedidos (Arepas German y Cenneca sin productos). Se quitó la simulación sin API.
+- Sugeridos: si hoy no viene ningún proveedor, la vista muestra la próxima visita (etiqueta «Hoy no viene nadie · próxima visita») con los sugeridos armados con la caja de hoy; se confirman el día de la visita. Caja de hoy abierta en $600.000 (prueba).

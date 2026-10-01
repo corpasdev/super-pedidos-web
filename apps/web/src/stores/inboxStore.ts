@@ -18,8 +18,11 @@ export const useInboxStore = defineStore("inbox", () => {
   async function loadDays(): Promise<void> {
     const response = await apiClient.get<{ days: InboxDayItem[] }>("/inbox/days")
     days.value = response.days
-    // La bandeja muestra siempre el día actual (se actualiza sola al cambiar el día).
-    selectedDay.value = days.value.find((day) => day.isToday)?.day ?? null
+    // Hoy, si viene algún proveedor. Si hoy no viene nadie, la próxima visita: el agente deja
+    // armados esos sugeridos con la caja de hoy (se confirman el día que viene el proveedor).
+    const today = days.value.find((day) => day.isToday)
+    const next = today && today.vendorCount > 0 ? today : days.value.find((day) => day.vendorCount > 0)
+    selectedDay.value = next?.day ?? today?.day ?? null
   }
 
   async function load(): Promise<void> {

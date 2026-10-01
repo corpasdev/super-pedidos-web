@@ -58,6 +58,7 @@ export const es = {
     cashInput: "Efectivo en caja",
     cashSave: "Guardar",
     comingToday: "Vienen hoy",
+    nextVisit: "Hoy no viene nadie · próxima visita",
     dayToday: "Hoy",
     dayVendors: (count: number): string => String(count),
     confirmOnVisitDay: (day: string): string => `Se confirma el ${day}`,
