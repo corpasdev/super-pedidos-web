@@ -7,7 +7,7 @@ import { useWizardStore } from "../../stores/wizardStore"
 import type { InboxVendorItem } from "../../infrastructure/apiTypes"
 import { es } from "../../i18n/es"
 import { formatDay, formatLongDay, formatMoney, formatShortDay } from "../../i18n/format"
-import { palette, SUGGESTION_COLORS } from "../../theme/naiveOverrides"
+import { DEBT_COLOR, palette, SUGGESTION_COLORS } from "../../theme/naiveOverrides"
 import { useOrderEditor } from "../composables/useOrderEditor"
 import CashBar from "../components/inbox/CashBar.vue"
 import SalesUploadPanel from "../components/inbox/SalesUploadPanel.vue"
@@ -176,7 +176,20 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
     <div class="flex flex-col gap-4 lg:col-start-3 lg:row-span-2">
       <n-card :bordered="false" :content-style="{ padding: '14px 16px' }">
         <n-flex vertical :size="8">
-          <n-text :style="tileTitleStyle">{{ es.inbox.owed }}</n-text>
+          <!-- Título y qué parte de la caja se aparta para pagar (mismo coral que su tramo en la barra de caja) -->
+          <n-flex justify="space-between" align="center" :size="8" :wrap="false">
+            <n-text :style="tileTitleStyle">{{ es.inbox.owed }}</n-text>
+            <n-tag
+              v-if="(inbox.inbox?.debtReserve ?? 0) > 0 && (inbox.inbox?.cash.openingAmount ?? 0) > 0"
+              round
+              size="small"
+              :bordered="false"
+              :color="{ color: DEBT_COLOR, textColor: palette.brandDeep }"
+              :style="{ fontWeight: 700 }"
+            >
+              {{ es.inbox.cashShareTag(cashPercent(inbox.inbox?.debtReserve ?? 0)) }}
+            </n-tag>
+          </n-flex>
           <!-- Por proveedor: total que se le debe y, debajo, cada factura con su fecha y saldo -->
           <n-flex v-for="debt in debts" :key="debt.supplierId" vertical :size="2">
             <n-flex justify="space-between" :size="8" :wrap="false">
