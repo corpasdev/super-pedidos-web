@@ -35,3 +35,12 @@ npm run mock:deudas --workspace apps/api -- --quitar  # las quita
 ```
 
 Son pedidos ya recibidos, sin pagar o con un abono, en los días de visita anteriores a hoy. No tienen productos, así que no cambian lo vendido ni la existencia que usa el agente, y así se reconocen para quitarlas (un pedido real siempre tiene productos).
+
+## Vencidos para cambio de prueba
+
+```sh
+npm run mock:vencidos --workspace apps/api              # anota 4 perecederos de proveedores con visita activa
+npm run mock:vencidos --workspace apps/api -- --quitar  # quita solo esos
+```
+
+Se anotan con el mismo servicio que usa la web. Sus ids quedan en `data/mock/.vencidos-prueba.json` (no se sube a git), así «--quitar» nunca toca los vencidos que anotó el dueño.

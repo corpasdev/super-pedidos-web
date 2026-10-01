@@ -34,3 +34,4 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Sugeridos: si hoy no viene ningún proveedor, la vista muestra la próxima visita (etiqueta «Hoy no viene nadie · próxima visita») con los sugeridos armados con la caja de hoy; se confirman el día de la visita. Caja de hoy abierta en $600.000 (prueba).
 - Caja compartida en Sugeridos: cada pedido del día se arma con lo que dejan los anteriores (`cashShare` en InboxService, en el orden de las tarjetas). Con $600.000 alcanza para MD, Colombina y parte de Guadalupe.
 - Facturas de prueba en «Le debes»: Colombina (21 y 28 sep, saldo $269.150) y MD (28 sep, $97.300). Se quitan con `npm run mock:deudas --workspace apps/api -- --quitar`.
+- Vencidos de prueba: bimboletes (Bimbo), chocorramo brownie (Ramo), Club social queso (Colombina), galleta Oreo (Guadalupe). Se quitan con `npm run mock:vencidos --workspace apps/api -- --quitar`.

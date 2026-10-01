@@ -33,3 +33,6 @@ graphify-out/
 
 # ventas reales de la tienda: no se suben (data/mock sí)
 data/ventas-*.xlsx
+
+# ids de los vencidos de prueba (dependen de la base de cada quien)
+data/mock/.vencidos-prueba.json
