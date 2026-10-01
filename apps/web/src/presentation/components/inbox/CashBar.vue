@@ -13,8 +13,16 @@ import { moneyInputProps } from "../../numericInput"
  * El lápiz convierte ese mismo número en campo editable, sin bordes ni botón de guardar:
  * Enter o salir del campo guarda; Esc cancela.
  */
-/** `planned`: lo que el agente ya repartió de la caja en los sugeridos pendientes; `plannedOrders`: en cuántos pedidos. */
-const props = defineProps<{ cash: DailyCashItem | null; saving?: boolean; planned?: number; plannedOrders?: number }>()
+/** Un sugerido pendiente con la plata que le asignó el agente y su color. */
+export interface CashSegment {
+  sellerId: string
+  name: string
+  amount: number
+  color: string
+}
+
+/** `segments`: el reparto de la caja entre los sugeridos pendientes, en el orden en que se armaron. */
+const props = defineProps<{ cash: DailyCashItem | null; saving?: boolean; segments?: CashSegment[] }>()
 const emit = defineEmits<{ open: [amount: number] }>()
 
 const input = ref<InputNumberInst | null>(null)
@@ -25,7 +33,8 @@ const shownAmount = computed(() => (hasCash.value ? (props.cash!.remainingAmount
 // Reparto de la caja: lo ya pedido hoy, lo que tienen asignado los sugeridos y lo que queda libre.
 const opening = computed(() => (hasCash.value ? props.cash!.openingAmount! : 0))
 const spent = computed(() => (hasCash.value ? props.cash!.spentAmount : 0))
-const planned = computed(() => Math.min(props.planned ?? 0, Math.max(0, opening.value - spent.value)))
+const segments = computed(() => props.segments ?? [])
+const planned = computed(() => Math.min(segments.value.reduce((sum, segment) => sum + segment.amount, 0), Math.max(0, opening.value - spent.value)))
 const free = computed(() => Math.max(0, opening.value - spent.value - planned.value))
 const percentOf = (value: number): string => (opening.value > 0 ? `${Math.min(100, (value / opening.value) * 100)}%` : "0%")
 /** Al corregir por debajo de lo ya pedido hoy, la caja queda en $0: se avisa mientras se escribe. */
@@ -147,15 +156,19 @@ const bareInput = {
           :style="{ display: 'flex', height: '8px', borderRadius: '999px', overflow: 'hidden', background: 'rgba(253,253,253,0.18)' }"
         >
           <span :style="{ width: percentOf(spent), background: palette.accent, transition: 'width .3s' }" />
-          <span :style="{ width: percentOf(planned), background: palette.accent, opacity: 0.45, transition: 'width .3s' }" />
+          <!-- Un tramo por sugerido, con el color de su tarjeta -->
+          <n-tooltip v-for="segment in segments" :key="segment.sellerId" placement="bottom">
+            <template #trigger>
+              <span :style="{ width: percentOf(segment.amount), background: segment.color, transition: 'width .3s', cursor: 'default' }" />
+            </template>
+            {{ segment.name }} · {{ formatMoney(segment.amount) }}
+          </n-tooltip>
         </div>
         <n-flex :size="10" :wrap="true" :style="{ rowGap: '2px' }">
           <n-text v-if="spent > 0" class="tabular-nums" :style="legendStyle">
             <span :style="dot(1)" />{{ es.inbox.cashSpentShort(formatMoney(spent)) }}
           </n-text>
-          <n-text class="tabular-nums" :style="legendStyle">
-            <span :style="dot(0.45)" />{{ es.inbox.cashPlanned(formatMoney(planned), plannedOrders ?? 0) }}
-          </n-text>
+          <n-text class="tabular-nums" :style="legendStyle">{{ es.inbox.cashPlanned(formatMoney(planned), segments.length) }}</n-text>
           <n-text class="tabular-nums" :style="legendStyle">{{ es.inbox.cashFree(formatMoney(free)) }}</n-text>
         </n-flex>
       </n-flex>

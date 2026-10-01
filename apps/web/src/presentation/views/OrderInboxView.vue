@@ -7,7 +7,7 @@ import { useWizardStore } from "../../stores/wizardStore"
 import type { InboxVendorItem } from "../../infrastructure/apiTypes"
 import { es } from "../../i18n/es"
 import { formatDay, formatLongDay, formatMoney } from "../../i18n/format"
-import { palette } from "../../theme/naiveOverrides"
+import { palette, SUGGESTION_COLORS } from "../../theme/naiveOverrides"
 import { useOrderEditor } from "../composables/useOrderEditor"
 import CashBar from "../components/inbox/CashBar.vue"
 import SalesUploadPanel from "../components/inbox/SalesUploadPanel.vue"
@@ -44,11 +44,23 @@ const canOpen = (vendor: InboxVendorItem): boolean => vendor.orderToday === null
 const hasSomethingToOrder = (vendor: InboxVendorItem): boolean => canOpen(vendor) && (vendor.ready?.productCount ?? 0) > 0
 
 
-/** Cuánto de la caja dejó repartido el agente en los sugeridos que faltan por confirmar. */
-const plannedCash = computed(() => {
-  const ready = vendors.value.filter((vendor) => vendor.orderToday === null && (vendor.ready?.totalCost ?? 0) > 0)
-  return { total: ready.reduce((sum, vendor) => sum + (vendor.ready?.totalCost ?? 0), 0), orders: ready.length }
-})
+/** Reparto de la caja: cada sugerido pendiente con plata asignada recibe un color (barra de caja y su tarjeta). */
+const cashSegments = computed(() =>
+  vendors.value
+    .filter((vendor) => vendor.orderToday === null && (vendor.ready?.totalCost ?? 0) > 0)
+    .map((vendor, index) => ({
+      sellerId: vendor.sellerId,
+      name: vendor.supplierName,
+      amount: vendor.ready!.totalCost,
+      color: SUGGESTION_COLORS[index % SUGGESTION_COLORS.length]!,
+    })),
+)
+const segmentOf = (sellerId: string) => cashSegments.value.find((segment) => segment.sellerId === sellerId) ?? null
+/** Parte de la caja del día que se lleva ese sugerido (para su etiqueta de color). */
+const cashPercent = (amount: number): number => {
+  const opening = inbox.inbox?.cash.openingAmount ?? 0
+  return opening > 0 ? Math.round((amount / opening) * 100) : 0
+}
 
 /** Solo el día de la visita se confirma; los otros días el sugerido se puede revisar. */
 const isSelectedToday = computed(() => inbox.inbox === null || inbox.inbox.day === inbox.inbox.today)
@@ -149,8 +161,7 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
       <CashBar
         :cash="inbox.inbox?.cash ?? null"
         :saving="wizard.dailyCashLoading"
-        :planned="plannedCash.total"
-        :planned-orders="plannedCash.orders"
+        :segments="cashSegments"
         @open="openCash"
       />
     </div>
@@ -208,7 +219,11 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
               @click="open(vendor)"
               @keydown.enter="open(vendor)"
             >
-              <VendorCard :vendor="vendor" />
+              <VendorCard
+                :vendor="vendor"
+                :color="segmentOf(vendor.sellerId)?.color ?? null"
+                :cash-percent="segmentOf(vendor.sellerId) ? cashPercent(segmentOf(vendor.sellerId)!.amount) : null"
+              />
             </n-card>
           </n-gi>
         </n-grid>
