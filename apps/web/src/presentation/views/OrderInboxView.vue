@@ -172,7 +172,6 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
         <n-text :style="{ fontSize: '18px', fontWeight: 700, textTransform: 'capitalize' }">
           {{ formatLongDay(inbox.inbox?.day ?? "") }}
         </n-text>
-        <n-tag v-if="!isSelectedToday" round :bordered="false" type="info">{{ es.inbox.nextVisit }}</n-tag>
         <n-button quaternary circle size="small" :loading="inbox.loading" :aria-label="es.inbox.reload" @click="reload">
           <template #icon><n-icon :component="RefreshOutline" /></template>
         </n-button>
