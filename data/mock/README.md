@@ -26,3 +26,12 @@ También se puede subir el archivo a mano en el recuadro «Excel de ventas» de 
 - `--reemplazar` solo quita Excel de prueba (los que empiezan por `ventas-semana-`); nunca toca los reales.
 - Las ventas quedan guardadas en la base real (`sales_reports` y `sales_daily`), como cualquier Excel subido.
 - Sugeridos muestra solo a los proveedores que vienen **hoy**. Por ahora solo está cargado el calendario del lunes, así que los sugeridos se ven los lunes.
+
+## Facturas pendientes de prueba («Le debes»)
+
+```sh
+npm run mock:deudas --workspace apps/api              # 2 facturas a un proveedor y 1 a otro (los de más productos con visita activa)
+npm run mock:deudas --workspace apps/api -- --quitar  # las quita
+```
+
+Son pedidos ya recibidos, sin pagar o con un abono, en los días de visita anteriores a hoy. No tienen productos, así que no cambian lo vendido ni la existencia que usa el agente, y así se reconocen para quitarlas (un pedido real siempre tiene productos).
