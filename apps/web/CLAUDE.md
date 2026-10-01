@@ -7,4 +7,3 @@
 - Todas las stores de Pinia llevan `acceptHMRUpdate`.
 - Sin diálogos de confirmación para acciones simples (el dueño los rechazó).
 - Verificar: `npm run typecheck --workspace apps/web`, `npx eslint apps/web`, `npm test --workspace apps/web`.
-- Modo de prueba (`npm run dev:mock`, `?mock` o `VITE_MOCK=1`): `src/infrastructure/mockApi.ts` simula toda la API con `data/mock/api` y la sesión entra sola. Toda ruta nueva de la API debe tener su simulación ahí; lo no simulado responde 501.

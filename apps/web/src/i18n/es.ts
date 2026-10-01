@@ -107,7 +107,6 @@ export const es = {
       empty: "No hay vencidos pendientes.",
       done: (product: string): string => `Cambiado: ${product}`,
     },
-    mockBanner: "Modo de prueba: los datos son simulados y nada se guarda. Para usar los datos reales abre la página con ?mock=0 o usa npm run dev:web.",
     cashMissingShort: "Toca el lápiz para escribir el efectivo de hoy.",
     cashBelowSpent: (spent: string): string => `Ya se pidieron ${spent} hoy: la caja quedará en $0.`,
     cashSpentOf: (spent: string, opening: string): string => `Pedido ${spent} de ${opening}`,
