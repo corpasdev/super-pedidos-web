@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js"
 import { supabaseAuthClient } from "../infrastructure/supabaseAuthClient"
 import { apiClient } from "../infrastructure/apiClient"
 import { setAuthToken } from "../infrastructure/authTokenStore"
+import { isMockMode, MOCK_STORE, MOCK_USER } from "../infrastructure/mockApi"
 
 export interface OwnerStore {
   id: string
@@ -42,6 +43,13 @@ export const useSessionStore = defineStore("session", () => {
 
   /** Restaura la sesión guardada por Supabase y escucha cambios (login/logout por pestañas). */
   async function initialize(): Promise<void> {
+    // Modo de prueba: entra directo con el dueño de prueba, sin Supabase.
+    if (isMockMode) {
+      user.value = { ...MOCK_USER }
+      store.value = { ...MOCK_STORE }
+      isReady.value = true
+      return
+    }
     const { data } = await supabaseAuthClient.auth.getSession()
     applySession(data.session)
     supabaseAuthClient.auth.onAuthStateChange((_event, session) => applySession(session))
@@ -49,6 +57,11 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   async function signIn(email: string, password: string): Promise<void> {
+    if (isMockMode) {
+      user.value = { ...MOCK_USER }
+      store.value = { ...MOCK_STORE }
+      return
+    }
     isSigningIn.value = true
     signInError.value = null
     const { data, error } = await supabaseAuthClient.auth.signInWithPassword({ email, password })
@@ -61,7 +74,7 @@ export const useSessionStore = defineStore("session", () => {
   }
 
   async function signOut(): Promise<void> {
-    await supabaseAuthClient.auth.signOut()
+    if (!isMockMode) await supabaseAuthClient.auth.signOut()
     user.value = null
     store.value = null
     setAuthToken(null)

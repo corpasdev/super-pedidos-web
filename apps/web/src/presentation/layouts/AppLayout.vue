@@ -25,6 +25,7 @@ import { useStoreProfileStore } from "../../stores/storeProfileStore"
 import { palette, radius } from "../../theme/naiveOverrides"
 import { es } from "../../i18n/es"
 import { useMediaQuery } from "../composables/useMediaQuery"
+import { isMockMode } from "../../infrastructure/mockApi"
 
 const isDesktop = useMediaQuery("(min-width: 768px)")
 const router = useRouter()
@@ -311,6 +312,9 @@ watch(
               </template>
             </n-flex>
           </n-flex>
+
+          <!-- Modo de prueba: datos simulados de data/mock, nada se guarda -->
+          <n-alert v-if="isMockMode" type="info" :bordered="false">{{ es.inbox.mockBanner }}</n-alert>
 
           <router-view />
         </n-flex>

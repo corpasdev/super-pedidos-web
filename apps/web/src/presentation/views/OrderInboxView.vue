@@ -9,7 +9,6 @@ import { es } from "../../i18n/es"
 import { formatDay, formatLongDay, formatMoney } from "../../i18n/format"
 import { palette } from "../../theme/naiveOverrides"
 import { useOrderEditor } from "../composables/useOrderEditor"
-import { isMockMode } from "../../infrastructure/mockApi"
 import CashBar from "../components/inbox/CashBar.vue"
 import SalesUploadPanel from "../components/inbox/SalesUploadPanel.vue"
 import VendorCard from "../components/inbox/VendorCard.vue"
@@ -137,9 +136,6 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
     En celular todo se apila en una columna (caja, Excel, le debes, proveedores).
   -->
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
-    <!-- Modo de prueba: los datos vienen de data/mock y nada se guarda -->
-    <n-alert v-if="isMockMode" type="info" :bordered="false" class="lg:col-span-3">{{ es.inbox.mockBanner }}</n-alert>
-
     <!-- Caja (lo que más limita el pedido) -->
     <div class="lg:col-start-1">
       <CashBar :cash="inbox.inbox?.cash ?? null" :saving="wizard.dailyCashLoading" @open="openCash" />
