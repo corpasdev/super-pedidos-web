@@ -105,7 +105,7 @@ export { StockLevel } from "./domain/entities/StockLevel.js"
 export { SalesReport } from "./domain/entities/SalesReport.js"
 export { SalesReportLine } from "./domain/entities/SalesReportLine.js"
 export { OrderLine } from "./domain/entities/OrderLine.js"
-export type { OrderLineCostSource } from "./domain/entities/OrderLine.js"
+export type { OrderLineCostSource, StockPositionSnapshot } from "./domain/entities/OrderLine.js"
 export { OrderSuggestion } from "./domain/entities/OrderSuggestion.js"
 export type { OrderLineGroup } from "./domain/entities/OrderSuggestion.js"
 export { PurchaseOrder } from "./domain/entities/PurchaseOrder.js"
@@ -134,7 +134,7 @@ export type { InventoryMovementRepository } from "./domain/ports/InventoryMoveme
 export type { StoreRepository, StoreDataSource } from "./domain/ports/StoreRepository.js"
 
 // agent: el ciclo del agente (Situación → Observar → Evaluar → Decidir → Actuar → Aprender)
-export { OrderAgent } from "./agent/OrderAgent.js"
+export { OrderAgent, runOrderAgent, AGENT_STAGES } from "./agent/OrderAgent.js"
 export { buildAgentSituation } from "./agent/situation.js"
 export { buildAgentObservation } from "./agent/observation.js"
 export { buildAgentMemory } from "./agent/memory.js"
@@ -150,3 +150,42 @@ export type {
   AgentSituationOutcome,
   AgentStageName,
 } from "./agent/agentTypes.js"
+// sugerido de pedido (modelo de niveles B < PD < T): funciones puras
+export { planSuggestion } from "./suggestion/plan.js"
+export { allocateByLevels, fillTowards, toBase, toTope } from "./suggestion/allocation.js"
+export {
+  unitsAboveBase,
+  stockStatusOf,
+  physicalStock,
+  hasCompleteLevels,
+  levelsProblem,
+  positionOf,
+  hasMoved,
+} from "./suggestion/levels.js"
+export { movedUnitsSince } from "./suggestion/movedUnits.js"
+export type { DailySale } from "./suggestion/movedUnits.js"
+export type {
+  StockLevels,
+  SuggestionItem,
+  StockStatus,
+  ProductPosition,
+  LevelReached,
+  SuggestedLine,
+  BudgetTier,
+  SuggestionPlan,
+} from "./suggestion/types.js"
+
+// bandeja del día: visitas de vendedores, entregas y deudas (funciones puras)
+export {
+  isoWeekdayOfDay,
+  daysBetweenDays,
+  addDaysToDay,
+  isVisitingOnDay,
+  visitsOnDay,
+  deliversSameDay,
+  deliveryLeadDaysOf,
+  expectedDeliveryDay,
+} from "./inbox/visits.js"
+export type { SellerVisit, VisitFrequencyValue } from "./inbox/visits.js"
+export { arrivalsDueOn, orderOfSupplierOn, debtsBySupplier } from "./inbox/ledger.js"
+export type { InboxOrder } from "./inbox/ledger.js"

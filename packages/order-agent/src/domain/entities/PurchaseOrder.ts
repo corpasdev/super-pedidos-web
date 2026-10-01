@@ -1,11 +1,14 @@
 import { sumBy } from "../../functional/arithmetic.js"
 import { TruckDelivery } from "./TruckDelivery.js"
 import { Money } from "../value-objects/Money.js"
+import type { StockPositionSnapshot } from "./OrderLine.js"
 
 export interface PurchaseOrderLine {
   productId: string
   units: number
   unitCost: Money
+  /** Copia de B/PD/T, CM, existencia y EA al momento de pedir (modelo de niveles). */
+  stockPosition?: StockPositionSnapshot | null
 }
 
 export interface PurchaseOrderBudget {

@@ -5,6 +5,7 @@ import { StockLevel as StockLevelValue } from "./StockLevel.js"
 import type { Barcode } from "../value-objects/Barcode.js"
 import { Money } from "../value-objects/Money.js"
 import { estimateUnitCost } from "../../formulas/estimatedCost.js"
+import type { StockLevels } from "../../suggestion/types.js"
 import type { PackSize } from "../value-objects/PackSize.js"
 
 /** Entidad: producto = un código de barras con su propio stock, costo y empaque. */
@@ -14,12 +15,22 @@ export class Product {
     readonly barcode: Barcode,
     readonly name: string,
     readonly category: string,
-    readonly salePrice: Money,
+    private currentSalePrice: Money,
     readonly supplierId: string,
     private brandId: string | null,
     private settings: ProductSettings,
     private stock: StockLevel,
   ) {}
+
+  /** Precio al que la tienda vende el producto. */
+  get salePrice(): Money {
+    return this.currentSalePrice
+  }
+
+  /** El dueño corrige el precio de venta. */
+  changeSalePrice(price: Money): void {
+    this.currentSalePrice = price
+  }
 
   get brandIdentifier(): string | null {
     return this.brandId
@@ -50,8 +61,24 @@ export class Product {
     return this.unitCost.pesos === 0
   }
 
+  /** Tope (T). */
   get maxStockUnits(): number | null {
     return this.settings.maxStockUnits
+  }
+
+  /** Base (B). */
+  get minStockUnits(): number | null {
+    return this.settings.minStockUnits
+  }
+
+  /** Punto de pedido (PD). */
+  get reorderPointUnits(): number | null {
+    return this.settings.reorderPointUnits
+  }
+
+  /** Niveles del modelo de sugerido: base < punto de pedido < tope. */
+  get levels(): StockLevels {
+    return { base: this.settings.minStockUnits, reorderPoint: this.settings.reorderPointUnits, tope: this.settings.maxStockUnits }
   }
 
   get stockUnits(): number {
@@ -77,6 +104,8 @@ export class Product {
       costSource: changes.costSource ?? this.settings.costSource,
       packSize: changes.packSize ?? this.settings.packSize,
       isEstimated: changes.isEstimated ?? this.settings.isEstimated,
+      minStockUnits: changes.minStockUnits !== undefined ? changes.minStockUnits : this.settings.minStockUnits,
+      reorderPointUnits: changes.reorderPointUnits !== undefined ? changes.reorderPointUnits : this.settings.reorderPointUnits,
     }
   }
 

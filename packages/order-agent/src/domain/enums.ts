@@ -18,8 +18,10 @@ export enum VisitFrequency {
 export enum ReplenishmentMode {
   ReplenishSold = "replenish_sold",
   FillToTarget = "fill_to_target",
-  /** Regla del dueño: se pide lo que falta para cubrir la base (base − stock), aunque la venta haya sido baja. */
+  /** Regla anterior del dueño: se pide lo que falta para cubrir la base (base − stock). */
   FillToBase = "fill_to_base",
+  /** Modelo actual: niveles B < PD < T y CM; la plata decide si se llega a la base, al tope o hasta donde alcance. */
+  Levels = "levels",
 }
 
 export enum CostSource {

@@ -4,7 +4,9 @@ import { calculateTargetUnits } from "../../formulas/targetUnits.js"
 import { SupplierScheduleNotConfiguredError } from "../errors/DomainErrors.js"
 import type { Supplier } from "../entities/Supplier.js"
 import type { Product } from "../entities/Product.js"
-import { OrderLine } from "../entities/OrderLine.js"
+import { OrderLine, type StockPositionSnapshot } from "../entities/OrderLine.js"
+import { planSuggestion } from "../../suggestion/plan.js"
+import type { SuggestedLine, SuggestionItem } from "../../suggestion/types.js"
 import { OrderSuggestion } from "../entities/OrderSuggestion.js"
 import type { SalesReport } from "../entities/SalesReport.js"
 import { ReplenishmentMode } from "../enums.js"
@@ -23,12 +25,87 @@ export interface OrderSuggestionCalculatorInput {
   safetyMarginRatio?: number
   /** Precio que dio el vendedor para ESTE pedido, por producto. Se usa en todo el cálculo, incluido el reparto (F9). */
   unitCostOverrides?: ReadonlyMap<string, Money>
+  /**
+   * Modo de niveles: CM por código de barras (vendido desde la última entrega de cada producto).
+   * Si no se entrega, se usa lo vendido en el Excel más reciente.
+   */
+  movedUnitsByBarcode?: ReadonlyMap<string, number>
+  /** Modo de niveles: plata del pedido; null = sin límite. Si no se da, sale de `availableBudget`. */
+  budgetPesos?: number | null
+}
+
+/** Datos del producto que necesita el motor funcional (sin métodos, sin mutación). */
+const toSuggestionItem =
+  (input: OrderSuggestionCalculatorInput) =>
+  (product: Product): SuggestionItem => ({
+    productId: product.id,
+    barcode: product.barcode.value,
+    name: product.name,
+    category: product.category,
+    packSize: product.packSize.units,
+    unitCost: (input.unitCostOverrides?.get(product.id) ?? product.unitCost).pesos,
+    levels: product.levels,
+    movedUnits: movedUnitsOf(input)(product),
+  })
+
+/**
+ * CM del producto. Si se calculó desde la última entrega, un producto sin ventas después de ella tiene CM = 0
+ * (NO se cae al Excel completo, que incluye ventas anteriores a la entrega). Sin cálculo, se usa el Excel.
+ */
+const movedUnitsOf = (input: OrderSuggestionCalculatorInput) => (product: Product): number =>
+  input.movedUnitsByBarcode !== undefined
+    ? (input.movedUnitsByBarcode.get(product.barcode.value) ?? 0)
+    : (input.salesReport?.unitsSoldFor(product.barcode) ?? 0)
+
+const snapshotOf = (line: SuggestedLine): StockPositionSnapshot => ({
+  levels: line.levels,
+  movedUnits: line.movedUnits,
+  unitsAboveBase: line.unitsAboveBase,
+  estimatedStock: line.estimatedStock,
+  status: line.status,
+  unitsToBase: line.unitsToBase,
+  unitsToTope: line.unitsToTope,
+  reached: line.reached,
+})
+
+/**
+ * Modelo de niveles (B < PD < T) con el motor funcional: planSuggestion(plata)(productos) es puro;
+ * aquí solo se traducen los datos de entrada y el plan a las entidades que usa el resto de la app.
+ */
+const buildLevelsSuggestion = (input: OrderSuggestionCalculatorInput): OrderSuggestion => {
+  const productsById = new Map(input.products.map((product) => [product.id, product]))
+  const budget = input.budgetPesos !== undefined ? input.budgetPesos : input.availableBudget.pesos
+  const plan = planSuggestion(budget)(input.products.map(toSuggestionItem(input)))
+  const lines = plan.lines.map(
+    (line) =>
+      new OrderLine(
+        productsById.get(line.productId)!,
+        input.brandNamesByProductId.get(line.productId) ?? "Otras marcas",
+        line.movedUnits,
+        line.levels.tope ?? line.unitsToTope,
+        line.unitsToTope,
+        line.estimatedStock ?? 0,
+        line.suggestedUnits,
+        null,
+        input.unitCostOverrides?.get(line.productId) ?? null,
+        snapshotOf(line),
+      ),
+  )
+  return new OrderSuggestion(
+    input.supplier,
+    input.availableBudget,
+    input.replenishmentMode,
+    input.salesReport?.id ?? null,
+    lines,
+    plan.tier,
+  )
 }
 
 /** Servicio de dominio sin estado: arma el pedido aplicando las fórmulas de la sección 6 en orden. */
 export class OrderSuggestionCalculator {
   buildSuggestion(input: OrderSuggestionCalculatorInput): OrderSuggestion {
     if (!input.supplier.hasSchedule) throw new SupplierScheduleNotConfiguredError(input.supplier.name)
+    if (input.replenishmentMode === ReplenishmentMode.Levels) return buildLevelsSuggestion(input)
     const safetyMarginRatio = input.safetyMarginRatio ?? DEFAULT_SAFETY_MARGIN_RATIO
     const eligibleProducts =
       input.replenishmentMode === ReplenishmentMode.FillToBase
