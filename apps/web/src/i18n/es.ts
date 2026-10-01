@@ -547,8 +547,9 @@ export const es = {
     below_minimum: "Bajo el mínimo del proveedor",
     postponed: "Pospuesto",
     nothing_to_order: "Nada que pedir",
-    confirmed: "Confirmado",
-    received: "Recibido",
+    // Los dos estados de un pedido: pendiente (se espera la entrega) y realizado (ya se entregó).
+    confirmed: "Pendiente",
+    received: "Realizado",
   },
   statusExplanation: {
     "order.status.maximum": "Hay plata para todo: se pide el máximo sugerido.",

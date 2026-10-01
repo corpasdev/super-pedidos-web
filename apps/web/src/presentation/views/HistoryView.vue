@@ -55,8 +55,9 @@ onMounted(async () => {
 const statusLabel = (status: string): string =>
   (es.orderStatus as unknown as Record<string, string>)[status] ?? status
 
-const statusSeverity = (status: string): "info" | "success" | "default" =>
-  status === "received" ? "success" : status === "confirmed" ? "info" : "default"
+/** Realizado (ya se entregó) en verde; pendiente (se espera la entrega) en amarillo. */
+const statusSeverity = (status: string): "warning" | "success" | "default" =>
+  status === "received" ? "success" : status === "confirmed" ? "warning" : "default"
 
 interface DetailLine {
   productId: string
