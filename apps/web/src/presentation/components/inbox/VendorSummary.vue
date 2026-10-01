@@ -14,7 +14,6 @@ const ready = computed(() => props.vendor.ready)
 const tierType = computed<"success" | "warning" | "error" | "default">(() => {
   const tier = ready.value?.budgetTier
   if (tier === "tope") return "success"
-  if (tier === "between_base_and_tope") return "warning"
   if (tier === "below_base" || tier === "not_even_one_pack") return "error"
   return "default"
 })
@@ -28,7 +27,10 @@ const tierType = computed<"success" | "warning" | "error" | "default">(() => {
         {{ es.inbox.deliveryOn(formatDay(vendor.expectedDeliveryDay)) }}
       </n-tag>
       <template v-if="ready">
-        <n-tag round size="small" :bordered="false" :type="tierType">{{ es.inbox.tiers[ready.budgetTier ?? 'nothing_to_order'] }}</n-tag>
+        <!-- «Base cubierta…» es el caso normal: no se avisa -->
+        <n-tag v-if="ready.budgetTier !== 'between_base_and_tope'" round size="small" :bordered="false" :type="tierType">
+          {{ es.inbox.tiers[ready.budgetTier ?? 'nothing_to_order'] }}
+        </n-tag>
         <n-tag v-if="ready.belowBaseCount > 0" round size="small" :bordered="false" type="error">{{ es.inbox.belowBase(ready.belowBaseCount) }}</n-tag>
       </template>
       <n-text depth="3" :style="{ fontSize: '13px' }">{{ es.inbox.products(productCount) }}</n-text>

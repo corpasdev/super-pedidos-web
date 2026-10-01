@@ -76,7 +76,6 @@ export const es = {
     belowBase: (count: number): string => `${count} bajo la base`,
     tiers: {
       tope: "Todo llega al tope",
-      between_base_and_tope: "Base cubierta · hacia el tope hasta donde alcanzó",
       below_base: "No alcanzó para la base de todos",
       not_even_one_pack: "No alcanza para ningún producto",
       nothing_to_order: "Nada que pedir: no se ha movido nada desde su última entrega",
