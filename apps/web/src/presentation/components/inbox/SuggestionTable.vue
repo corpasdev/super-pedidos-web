@@ -11,7 +11,7 @@ import { tablePagination } from "../../tables"
 /**
  * Pedido sugerido de un proveedor en tabla: una fila por producto, del más urgente al menos.
  * Columnas: producto (con su estado frente a la base y sus alertas), vendido, existencia, a cuánto llega con
- * el pedido, base, PD y tope, cantidad (−/+), precio de compra editable, subtotal y hasta dónde llegó la plata.
+ * el pedido, base, PD y tope, cantidad (−/+), precio de compra editable y subtotal.
  */
 const props = defineProps<{
   lines: SuggestionLine[]
@@ -22,9 +22,8 @@ const emit = defineEmits<{ step: [line: SuggestionLine, packDelta: number]; pric
 
 const pagination = tablePagination()
 
-type TagType = "error" | "warning" | "success" | "default" | "info"
+type TagType = "error" | "warning" | "success" | "default"
 const STATUS_TYPE: Record<string, TagType> = { below_base: "error", at_base: "warning", above_base: "success", no_levels: "default" }
-const REACHED_TYPE: Record<string, TagType> = { tope: "success", base: "info", partial: "warning", none: "error" }
 
 const tag = (label: string, type: TagType) => h(NTag, { size: "small", round: true, bordered: false, type }, () => label)
 /** Urgente · En la base · Sobre la base · Sin niveles. */
@@ -140,15 +139,6 @@ const columns: DataTableColumns<SuggestionLine> = [
     width: 120,
     render: (line) => h(NText, { class: "tabular-nums", style: { fontWeight: 700 } }, () => formatMoney(props.unitsOf(line) * line.unitCost)),
   },
-  {
-    key: "reached",
-    title: es.orderReview.table.reached,
-    width: 130,
-    render: (line) => {
-      const reached = line.stockPosition?.reached
-      return reached ? tag(es.reviewStep.reachedChips[reached] ?? reached, REACHED_TYPE[reached] ?? "default") : "—"
-    },
-  },
 ]
 </script>
 
@@ -161,7 +151,7 @@ const columns: DataTableColumns<SuggestionLine> = [
       :data="lines"
       :pagination="pagination"
       :row-key="(line: SuggestionLine) => line.productId"
-      :scroll-x="1200"
+      :scroll-x="1070"
       :bordered="true"
       size="small"
     >
