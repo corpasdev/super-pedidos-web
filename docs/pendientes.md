@@ -5,7 +5,7 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 ## Esperando al dueño
 - Calendario de martes a sábado de los 43 proveedores inactivos (solo está cargado el lunes: 9 proveedores). Se carga con migración, no desde la web.
 - Niveles B, PD y T de cada producto. Mientras falten, el motor repone lo movido (CM).
-- Ventas cargadas: `ventas-mock.xlsx` (de prueba, 24 al 30 de sept). Cuando el dueño suba su Excel real, quitar el de prueba con «Quitar».
+- Ventas cargadas: `ventas-semana-2026-09-28-al-2026-10-04.xlsx` (de prueba). Cuando el dueño suba su Excel real, quitar el de prueba con «Quitar».
 
 ## Técnico
 - Trabajo subido en la rama `feat/sugeridos-bandeja-y-catalogo` (6 commits sobre `main`). Falta abrir el pull request y unirla a `main` cuando el dueño lo apruebe.

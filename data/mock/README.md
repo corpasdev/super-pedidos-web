@@ -1,6 +1,6 @@
 # Ventas de prueba
 
-`ventas-mock.xlsx` es un Excel de ventas de prueba con el mismo formato que exporta el software de la tienda (hoja «Informe», 18 columnas, todo como texto). Sirve para probar el sugerido con la API y el agente reales: se carga como cualquier Excel de ventas y el agente calcula los pedidos con los productos, proveedores y niveles de Supabase.
+Los `ventas-semana-<desde>-al-<hasta>.xlsx` son Excel de ventas de prueba, uno por semana, con el mismo formato que exporta el software de la tienda (hoja «Informe», 18 columnas, todo como texto). Sirve para probar el sugerido con la API y el agente reales: se carga como cualquier Excel de ventas y el agente calcula los pedidos con los productos, proveedores y niveles de Supabase.
 
 ## De dónde salen los datos
 
@@ -14,14 +14,15 @@ Lo único inventado son las cantidades vendidas. Salen de los niveles de cada pr
 ## Generarlo y cargarlo
 
 ```sh
-npm run mock:ventas --workspace apps/api                          # ventas de los 7 días hasta ayer
-npm run mock:ventas --workspace apps/api -- --hasta 2026-09-30    # hasta esa fecha
-npm run mock:ventas --workspace apps/api -- --cargar              # genera y lo carga, igual que subirlo en la web
+npm run mock:ventas --workspace apps/api                                  # semana pasada (7 días hasta ayer)
+npm run mock:ventas --workspace apps/api -- --para 2026-10-05             # semana anterior a ese día de pedido
+npm run mock:ventas --workspace apps/api -- --para 2026-10-05 --cargar --reemplazar   # y lo carga, quitando los de prueba anteriores
 ```
 
-También se puede subir `ventas-mock.xlsx` a mano en el recuadro «Excel de ventas» de Sugeridos. Para quitarlo se usa «Quitar» en ese mismo recuadro.
+También se puede subir el archivo a mano en el recuadro «Excel de ventas» de Sugeridos. Para quitarlo se usa «Quitar» en ese mismo recuadro.
 
 ## Ojo
 
+- `--reemplazar` solo quita Excel de prueba (los que empiezan por `ventas-semana-`); nunca toca los reales.
 - Las ventas quedan guardadas en la base real (`sales_reports` y `sales_daily`), como cualquier Excel subido.
 - Sugeridos muestra solo a los proveedores que vienen **hoy**. Por ahora solo está cargado el calendario del lunes, así que los sugeridos se ven los lunes.
