@@ -10,8 +10,8 @@ import { tablePagination } from "../../tables"
 
 /**
  * Pedido sugerido de un proveedor en tabla: una fila por producto, del más urgente al menos.
- * Columnas: producto (con sus alertas), estado frente a la base, vendido, existencia antes y después,
- * niveles, cantidad (−/+), precio de compra editable, subtotal y hasta dónde llegó la plata.
+ * Columnas: producto (con sus alertas), estado frente a la base, vendido, existencia, a cuánto llega con
+ * el pedido, base, PD y tope, cantidad (−/+), precio de compra editable, subtotal y hasta dónde llegó la plata.
  */
 const props = defineProps<{
   lines: SuggestionLine[]
@@ -27,11 +27,9 @@ const STATUS_TYPE: Record<string, TagType> = { below_base: "error", at_base: "wa
 const REACHED_TYPE: Record<string, TagType> = { tope: "success", base: "info", partial: "warning", none: "error" }
 
 const tag = (label: string, type: TagType) => h(NTag, { size: "small", round: true, bordered: false, type }, () => label)
-const levels = (line: SuggestionLine): string => {
-  const position = line.stockPosition
-  if (position === null || position.base === null) return "—"
-  return `${position.base} · ${position.reorderPoint ?? "—"} · ${position.tope ?? "—"}`
-}
+/** Cifra de unidades alineada (— si el producto no tiene ese dato). */
+const units = (value: number | null, strong = false) =>
+  value === null ? "—" : h(NText, { class: "tabular-nums", style: strong ? { fontWeight: 700 } : undefined }, () => String(value))
 
 /** Precios que se están escribiendo (productId → precio); se envían al salir del campo o con Enter. */
 const priceDrafts = reactive<Record<string, number | null>>({})
@@ -98,20 +96,28 @@ const columns: DataTableColumns<SuggestionLine> = [
     key: "stock",
     title: es.orderReview.table.stock,
     align: "right",
-    width: 120,
-    render: (line) => {
-      const stock = line.stockPosition?.estimatedStock
-      if (stock === null || stock === undefined) return "—"
-      return h(NText, { class: "tabular-nums" }, () => es.orderReview.table.stockArrow(stock, stock + props.unitsOf(line)))
-    },
+    width: 100,
+    render: (line) => units(line.stockPosition?.estimatedStock ?? null),
   },
   {
-    key: "levels",
-    title: es.orderReview.table.levels,
+    key: "arrives",
+    title: es.orderReview.table.arrives,
     align: "right",
-    width: 130,
-    render: (line) => h(NText, { depth: 3, class: "tabular-nums" }, () => levels(line)),
+    width: 90,
+    render: (line) => {
+      const stock = line.stockPosition?.estimatedStock
+      return units(stock === null || stock === undefined ? null : stock + props.unitsOf(line), true)
+    },
   },
+  { key: "base", title: es.orderReview.table.base, align: "right", width: 70, render: (line) => units(line.stockPosition?.base ?? null) },
+  {
+    key: "reorderPoint",
+    title: es.orderReview.table.reorderPoint,
+    align: "right",
+    width: 70,
+    render: (line) => units(line.stockPosition?.reorderPoint ?? null),
+  },
+  { key: "tope", title: es.orderReview.table.tope, align: "right", width: 70, render: (line) => units(line.stockPosition?.tope ?? null) },
   {
     key: "order",
     title: es.orderReview.table.order,
@@ -155,17 +161,21 @@ const columns: DataTableColumns<SuggestionLine> = [
 </script>
 
 <template>
-  <n-data-table
-    :columns="columns"
-    :data="lines"
-    :pagination="pagination"
-    :row-key="(line: SuggestionLine) => line.productId"
-    :scroll-x="1240"
-    :bordered="true"
-    size="small"
-  >
-    <template #empty>
-      <n-empty :description="es.orderReview.table.empty" />
-    </template>
-  </n-data-table>
+  <n-flex vertical :size="8">
+    <!-- Nota de la sigla PD -->
+    <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.orderReview.table.reorderPointNote }}</n-text>
+    <n-data-table
+      :columns="columns"
+      :data="lines"
+      :pagination="pagination"
+      :row-key="(line: SuggestionLine) => line.productId"
+      :scroll-x="1330"
+      :bordered="true"
+      size="small"
+    >
+      <template #empty>
+        <n-empty :description="es.orderReview.table.empty" />
+      </template>
+    </n-data-table>
+  </n-flex>
 </template>
