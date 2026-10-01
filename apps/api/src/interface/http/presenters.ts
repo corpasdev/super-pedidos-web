@@ -19,6 +19,7 @@ export const supplierPresenter = (source: SupplierDataSource) => {
     name: supplier.name,
     taxId: supplier.taxId,
     contactEmail: supplier.contactEmail,
+    whatsappNumber: supplier.whatsappNumber,
     hasSchedule: supplier.hasSchedule,
     orderWeekday: supplier.orderWeekday,
     deliveryWeekday: supplier.deliveryWeekday,

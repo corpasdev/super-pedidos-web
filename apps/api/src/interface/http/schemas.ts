@@ -9,6 +9,13 @@ export const visitFrequencySchema = z.enum(["weekly", "biweekly"])
 export const costSourceSchema = z.enum(["owner", "sales_report", "estimated"])
 export const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Usa el formato YYYY-MM-DD")
 export const optionalStringSchema = z.string().trim().max(200).nullable()
+/** WhatsApp o teléfono: dígitos, espacios o guiones, con «+» opcional al inicio (7 a 20 caracteres). */
+export const whatsappSchema = z
+  .string()
+  .trim()
+  .regex(/^\+?[0-9 -]{7,20}$/, "Escribe un número de WhatsApp válido, por ejemplo +57 300 123 4567")
+  .nullable()
+  .or(z.literal("").transform(() => null))
 
 export const scheduleSchema = z
   .object({
@@ -24,6 +31,7 @@ export const updateSupplierBodySchema = z
     name: z.string().trim().min(1).max(120).optional(),
     taxId: optionalStringSchema.optional(),
     contactEmail: optionalStringSchema.optional(),
+    whatsappNumber: whatsappSchema.optional(),
     schedule: scheduleSchema.optional(),
     minimumOrderAmount: nullableMoneyPesosSchema.optional(),
     maximumOrderAmount: nullableMoneyPesosSchema.optional(),
@@ -48,6 +56,7 @@ export const createSupplierBodySchema = z
     name: z.string().trim().min(1).max(120),
     taxId: z.string().trim().max(40).nullable().optional(),
     contactEmail: z.string().trim().email().nullable().optional().or(z.literal("")),
+    whatsappNumber: whatsappSchema.optional(),
     orderWeekday: weekdaysSchema,
     deliveryWeekday: weekdaysSchema,
     visitFrequency: visitFrequencySchema.default("weekly"),

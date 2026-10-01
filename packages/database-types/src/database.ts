@@ -743,6 +743,7 @@ export type Database = {
           tax_id: string | null
           updated_at: string
           visit_frequency: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           biweekly_anchor_date?: string | null
@@ -760,6 +761,7 @@ export type Database = {
           tax_id?: string | null
           updated_at?: string
           visit_frequency?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           biweekly_anchor_date?: string | null
@@ -777,6 +779,7 @@ export type Database = {
           tax_id?: string | null
           updated_at?: string
           visit_frequency?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: [
           {

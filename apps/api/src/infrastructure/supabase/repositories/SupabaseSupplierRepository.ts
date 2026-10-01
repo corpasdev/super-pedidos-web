@@ -76,6 +76,7 @@ export class SupabaseSupplierRepository implements SupplierRepository {
         name: input.name,
         tax_id: input.taxId,
         contact_email: input.contactEmail,
+        whatsapp_number: input.whatsappNumber,
         order_weekday: input.orderWeekday,
         delivery_weekday: input.deliveryWeekday,
         visit_frequency: input.visitFrequency,
@@ -117,7 +118,7 @@ export class SupabaseSupplierRepository implements SupplierRepository {
   async saveIdentity(
     storeId: string,
     supplierId: string,
-    identity: { name: string; taxId: string | null; contactEmail: string | null },
+    identity: { name: string; taxId: string | null; contactEmail: string | null; whatsappNumber: string | null },
   ): Promise<void> {
     const { error } = await this.supabase
       .from("suppliers")
@@ -125,6 +126,7 @@ export class SupabaseSupplierRepository implements SupplierRepository {
         name: identity.name,
         tax_id: identity.taxId,
         contact_email: identity.contactEmail,
+        whatsapp_number: identity.whatsappNumber,
         updated_at: new Date().toISOString(),
       })
       .eq("store_id", storeId)

@@ -36,3 +36,4 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Facturas de prueba en «Le debes»: Colombina (21 y 28 sep, saldo $269.150) y MD (28 sep, $97.300). Se quitan con `npm run mock:deudas --workspace apps/api -- --quitar`.
 - Vencidos de prueba: bimboletes (Bimbo), chocorramo brownie (Ramo), Club social queso (Colombina), galleta Oreo (Guadalupe). Se quitan con `npm run mock:vencidos --workspace apps/api -- --quitar`.
 - Caja: antes de repartir en sugeridos se aparta lo que se les debe a los proveedores del día (`debtReserveFor`); tramo coral en la barra de caja. Falta revisarlo en el navegador. Pendiente: respuesta del dueño sobre el PD (existencia desde el último pedido recibido).
+- Proveedores: nuevo campo WhatsApp (suppliers.whatsapp_number, migración 20261001150000), editable en la tabla y en Crear proveedor. Base para enviarle el pedido más adelante. Reiniciar la API.

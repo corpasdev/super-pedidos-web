@@ -22,6 +22,7 @@ const emptyForm = () => ({
   name: "",
   taxId: "",
   contactEmail: "",
+  whatsappNumber: "",
   orderWeekday: null as number | null,
   deliveryWeekday: null as number | null,
   visitFrequency: "weekly" as "weekly" | "biweekly",
@@ -43,6 +44,11 @@ watch(
 const required = { required: true, message: es.catalogEntry.required, trigger: ["blur", "change"] }
 const rules: FormRules = {
   name: { ...required, trigger: ["blur", "input"] },
+  whatsappNumber: {
+    trigger: ["blur"],
+    validator: (_rule: unknown, value: string) =>
+      value.trim() === "" || /^\+?[0-9 -]{7,20}$/.test(value.trim()) ? true : new Error(es.catalogEntry.whatsappInvalid),
+  },
   orderWeekday: { ...required, type: "number" },
   deliveryWeekday: { ...required, type: "number" },
   minimumOrderAmount: { ...required, type: "number" },
@@ -66,6 +72,7 @@ async function submit(): Promise<void> {
       name: form.name,
       taxId: form.taxId.trim() || null,
       contactEmail: form.contactEmail.trim() || null,
+      whatsappNumber: form.whatsappNumber.trim() || null,
       orderWeekday: form.orderWeekday,
       deliveryWeekday: form.deliveryWeekday,
       visitFrequency: form.visitFrequency,
@@ -101,6 +108,13 @@ async function submit(): Promise<void> {
         </n-form-item-gi>
         <n-form-item-gi :label="es.catalogEntry.fields.email" path="contactEmail">
           <n-input v-model:value="form.contactEmail" :placeholder="es.catalogEntry.placeholders.optional" :input-props="{ id: 'new-supplier-email', type: 'email' }" />
+        </n-form-item-gi>
+        <n-form-item-gi :label="es.catalogEntry.fields.whatsapp" path="whatsappNumber">
+          <n-input
+            v-model:value="form.whatsappNumber"
+            :placeholder="es.catalogEntry.placeholders.whatsapp"
+            :input-props="{ id: 'new-supplier-whatsapp', type: 'tel', inputmode: 'tel', autocomplete: 'tel' }"
+          />
         </n-form-item-gi>
 
         <n-form-item-gi :label="es.suppliersView.columns.orderDay" path="orderWeekday">

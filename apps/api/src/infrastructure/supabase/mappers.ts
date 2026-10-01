@@ -61,6 +61,7 @@ export const supplierFromRow = (row: SupplierRow): Supplier => {
       row.settings_are_estimated,
       row.maximum_order_amount === null ? null : Money.fromPesos(row.maximum_order_amount),
     ),
+    row.whatsapp_number,
   )
 }
 

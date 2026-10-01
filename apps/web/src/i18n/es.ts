@@ -215,6 +215,7 @@ export const es = {
       tope: "Tope",
       taxId: "NIT",
       email: "Correo",
+      whatsapp: "WhatsApp",
     },
     placeholders: {
       barcode: "Escanea o escribe el código",
@@ -225,8 +226,10 @@ export const es = {
       supplierName: "Ej: POSTOBON",
       optional: "Opcional",
       weekday: "Elige el día",
+      whatsapp: "Ej: +57 300 123 4567",
     },
     maximumBelowMinimum: "El tope no puede ser menor que el mínimo.",
+    whatsappInvalid: "Escribe un número válido, por ejemplo +57 300 123 4567.",
     levelsHint: "Entre la base y el tope debe haber al menos 2 unidades.",
   },
   suppliersView: {
@@ -235,6 +238,7 @@ export const es = {
     search: "Buscar proveedor…",
     columns: {
       supplier: "Proveedor",
+      whatsapp: "WhatsApp",
       orderDay: "Ofrece",
       deliveryDay: "Entrega",
       frequency: "Frecuencia",

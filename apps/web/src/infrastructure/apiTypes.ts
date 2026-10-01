@@ -3,6 +3,8 @@ export interface SupplierListItem {
   name: string
   taxId: string | null
   contactEmail: string | null
+  /** WhatsApp o teléfono para enviarle el pedido. */
+  whatsappNumber: string | null
   hasSchedule: boolean
   orderWeekday: number | null
   deliveryWeekday: number | null

@@ -6,6 +6,7 @@ export interface CreateSupplierInput {
   name: string
   taxId?: string | null
   contactEmail?: string | null
+  whatsappNumber?: string | null
   /** 1 = lunes … 7 = domingo. */
   orderWeekday: number
   deliveryWeekday: number
@@ -19,6 +20,7 @@ export interface NewSupplierRow {
   name: string
   taxId: string | null
   contactEmail: string | null
+  whatsappNumber: string | null
   orderWeekday: number
   deliveryWeekday: number
   visitFrequency: "weekly" | "biweekly"
@@ -87,6 +89,7 @@ export class CatalogEntryService {
       name,
       taxId: input.taxId?.trim() || null,
       contactEmail: input.contactEmail?.trim() || null,
+      whatsappNumber: input.whatsappNumber?.trim() || null,
       orderWeekday: input.orderWeekday,
       deliveryWeekday: input.deliveryWeekday,
       visitFrequency: input.visitFrequency,

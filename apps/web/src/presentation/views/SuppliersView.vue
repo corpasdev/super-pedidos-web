@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, h, onMounted, ref } from "vue"
-import { NFlex, NIcon, NInputNumber, NTag, NText, useNotification, type DataTableColumns } from "naive-ui"
+import { NFlex, NIcon, NInput, NInputNumber, NTag, NText, useNotification, type DataTableColumns } from "naive-ui"
 import { AddOutline, AlertCircle, CheckmarkCircle, SearchOutline, Sync } from "@vicons/ionicons5"
 import CreateSupplierModal from "../components/catalog/CreateSupplierModal.vue"
 import SupplierProductsModal from "../components/catalog/SupplierProductsModal.vue"
@@ -126,6 +126,42 @@ const saveStateIcon = (supplierId: string) => {
   return null
 }
 
+/** WhatsApp editable en la tabla: se guarda al salir del campo o con Enter. */
+const WHATSAPP_PATTERN = /^\+?[0-9 -]{7,20}$/
+async function saveWhatsapp(supplier: SupplierListItem, value: string): Promise<void> {
+  const next = value.trim() === "" ? null : value.trim()
+  if (next === supplier.whatsappNumber) return
+  if (next !== null && !WHATSAPP_PATTERN.test(next)) {
+    setRowState(supplier.id, "failed")
+    notification.error({ title: supplier.name, content: es.catalogEntry.whatsappInvalid, duration: 4000 })
+    return
+  }
+  setRowState(supplier.id, "saving")
+  try {
+    await apiClient.patch(`/suppliers/${supplier.id}`, { whatsappNumber: next })
+    supplier.whatsappNumber = next
+    setRowState(supplier.id, "saved")
+    setTimeout(() => {
+      if (rowState.value[supplier.id] === "saved") setRowState(supplier.id, null)
+    }, 2000)
+  } catch (error) {
+    setRowState(supplier.id, "failed")
+    notification.error({ title: supplier.name, content: error instanceof Error ? error.message : es.common.error, duration: 4000 })
+  }
+}
+
+const whatsappCell = (supplier: SupplierListItem) =>
+  h(NInput, {
+    defaultValue: supplier.whatsappNumber ?? "",
+    size: "small",
+    placeholder: "—",
+    inputProps: { type: "tel", inputmode: "tel", "aria-label": `${supplier.name}: ${es.suppliersView.columns.whatsapp}` },
+    onBlur: (event: FocusEvent) => void saveWhatsapp(supplier, (event.target as HTMLInputElement).value),
+    onKeyup: (event: KeyboardEvent) => {
+      if (event.key === "Enter") (event.target as HTMLInputElement).blur()
+    },
+  })
+
 const amountCell = (supplier: SupplierListItem, field: AmountField, label: string) =>
   h(NInputNumber, {
     value: supplier[field],
@@ -153,6 +189,7 @@ const columns: DataTableColumns<SupplierListItem> = [
         supplier.taxId ? h(NText, { depth: 3, style: { fontSize: "11px" } }, () => es.suppliersView.taxId(supplier.taxId!)) : null,
       ]),
   },
+  { key: "whatsappNumber", title: es.suppliersView.columns.whatsapp, width: 170, render: whatsappCell },
   { key: "orderWeekday", title: es.suppliersView.columns.orderDay, render: (supplier) => weekday(supplier.orderWeekday) },
   { key: "deliveryWeekday", title: es.suppliersView.columns.deliveryDay, render: (supplier) => weekday(supplier.deliveryWeekday) },
   {
@@ -226,7 +263,7 @@ const columns: DataTableColumns<SupplierListItem> = [
       :loading="loading"
       :pagination="pagination"
       :row-key="(supplier: SupplierListItem) => supplier.id"
-      :scroll-x="780"
+      :scroll-x="950"
       :bordered="true"
       :row-props="rowProps"
     />
