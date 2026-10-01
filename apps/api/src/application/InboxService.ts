@@ -31,6 +31,8 @@ export interface ReadyOrderSummary {
   productCount: number
   budgetTier: BudgetTier | null
   belowBaseCount: number
+  /** Plata que le tocó de la caja del día (null = caja sin abrir: solo el tope del proveedor). */
+  cashShare: number | null
 }
 
 export interface InboxVendor {
@@ -124,9 +126,13 @@ export class InboxService {
     ])
     const nameOf = (supplierId: string): string => supplierNames.get(supplierId) ?? "Proveedor"
 
+    // La caja es una sola para todo el día: cada pedido sale de lo que quedó después de los anteriores.
+    let cashLeft = cash.remainingAmount
+
     const buildVendor = async (visit: SellerVisit): Promise<InboxVendor> => {
       const existing = orderOfSupplierOn(day)(visit.supplierId)(orders)
-      const ready = existing === null ? await this.readySummary(storeId, visit.supplierId) : { summary: null, error: null }
+      const ready = existing === null ? await this.readySummary(storeId, visit.supplierId, cashLeft) : { summary: null, error: null }
+      if (cashLeft !== null && ready.summary !== null) cashLeft = Math.max(0, cashLeft - ready.summary.totalCost)
       return {
         sellerId: visit.id,
         sellerName: visit.sellerName,
@@ -143,11 +149,13 @@ export class InboxService {
       }
     }
 
-    // El agente corre para cada vendedor sin pedido hoy; de a 4 a la vez para no saturar Supabase.
+    // El agente corre para cada vendedor sin pedido hoy, uno tras otro: con caja abierta, cada uno
+    // necesita saber cuánto dejó el anterior. Sin caja, no hay reparto y se calculan de a 4 a la vez.
     const visitsToday = visitsOnDay(day)(sellers)
     const vendors: InboxVendor[] = []
-    for (let start = 0; start < visitsToday.length; start += CONCURRENCY) {
-      vendors.push(...(await Promise.all(visitsToday.slice(start, start + CONCURRENCY).map(buildVendor))))
+    const batch = cashLeft === null ? CONCURRENCY : 1
+    for (let start = 0; start < visitsToday.length; start += batch) {
+      vendors.push(...(await Promise.all(visitsToday.slice(start, start + batch).map(buildVendor))))
     }
 
     const arrivals = arrivalsDueOn(today)(orders).map((order) => ({
@@ -190,12 +198,17 @@ export class InboxService {
       }))
   }
 
-  private async readySummary(storeId: string, supplierId: string): Promise<{ summary: ReadyOrderSummary | null; error: string | null }> {
+  /** Pedido listo de un proveedor con la parte de la caja que le queda (`cashShare`; null = caja sin abrir). */
+  private async readySummary(
+    storeId: string,
+    supplierId: string,
+    cashShare: number | null,
+  ): Promise<{ summary: ReadyOrderSummary | null; error: string | null }> {
     try {
       const { suggestion, decision } = await this.orderSuggestionService.buildSuggestion({
         storeId,
         supplierId,
-        budgetPesos: null,
+        budgetPesos: cashShare,
         replenishmentMode: ReplenishmentMode.Levels,
       })
       return {
@@ -204,6 +217,7 @@ export class InboxService {
           productCount: suggestion.lines.filter((line) => line.finalUnits > 0).length,
           budgetTier: decision.budgetTier,
           belowBaseCount: decision.belowBaseCount,
+          cashShare,
         },
         error: null,
       }

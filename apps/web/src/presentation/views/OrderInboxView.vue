@@ -78,6 +78,8 @@ async function open(vendor: InboxVendorItem): Promise<void> {
   wizard.replenishmentMode = "levels"
   wizard.selectedSupplierId = vendor.supplierId
   wizard.selectedSellerId = vendor.sellerId
+  // Mismo reparto de la caja que la tarjeta: este pedido sale de lo que dejan los anteriores.
+  wizard.budgetPesos = vendor.ready?.cashShare ?? null
   if (!hasSomethingToOrder(vendor)) return
   try {
     await wizard.buildSuggestion()

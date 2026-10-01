@@ -295,6 +295,8 @@ export interface InboxReadySummary {
   productCount: number
   budgetTier: BudgetTier | null
   belowBaseCount: number
+  /** Plata que le tocó de la caja del día (null = caja sin abrir). */
+  cashShare: number | null
 }
 
 export interface InboxVendorItem {
