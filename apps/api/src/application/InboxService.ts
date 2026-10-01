@@ -43,6 +43,8 @@ export interface InboxVendor {
   sellerName: string | null
   supplierId: string
   supplierName: string
+  /** WhatsApp del proveedor para enviarle el pedido (null si no lo tiene). */
+  whatsappNumber: string | null
   deliversSameDay: boolean
   /** YYYY-MM-DD en que llega si se pide hoy. */
   expectedDeliveryDay: string
@@ -131,7 +133,7 @@ export class InboxService {
       this.supplierNames(storeId),
       this.ordersToWatch(storeId),
     ])
-    const nameOf = (supplierId: string): string => supplierNames.get(supplierId) ?? "Proveedor"
+    const nameOf = (supplierId: string): string => supplierNames.get(supplierId)?.name ?? "Proveedor"
 
     // La caja es una sola para todo el día. Primero se aparta lo que se les debe a los proveedores que vienen
     // (se les paga cuando llegan); con el resto, cada pedido sale de lo que quedó después de los anteriores.
@@ -151,6 +153,7 @@ export class InboxService {
         sellerName: visit.sellerName,
         supplierId: visit.supplierId,
         supplierName: nameOf(visit.supplierId),
+        whatsappNumber: supplierNames.get(visit.supplierId)?.whatsappNumber ?? null,
         deliversSameDay: deliversSameDay(visit),
         expectedDeliveryDay: expectedDeliveryDay(visit)(day),
         orderToday:
@@ -240,10 +243,10 @@ export class InboxService {
     }
   }
 
-  private async supplierNames(storeId: string): Promise<Map<string, string>> {
-    const { data, error } = await this.supabase.from("suppliers").select("id, name").eq("store_id", storeId)
+  private async supplierNames(storeId: string): Promise<Map<string, { name: string; whatsappNumber: string | null }>> {
+    const { data, error } = await this.supabase.from("suppliers").select("id, name, whatsapp_number").eq("store_id", storeId)
     if (error) throw error
-    return new Map((data ?? []).map((row) => [row.id, row.name]))
+    return new Map((data ?? []).map((row) => [row.id, { name: row.name, whatsappNumber: row.whatsapp_number }]))
   }
 
   /** Pedidos por recibir, con saldo pendiente o hechos en los últimos días. */
