@@ -87,7 +87,7 @@ export const es = {
     cashToday: "Caja hoy",
     invoiceOf: (day: string, total: string): string => `Factura del ${day} · ${total}`,
     invoiceBalance: (amount: string): string => `saldo ${amount}`,
-    cashShareTag: (percent: number): string => `${percent}% de la caja`,
+    cashShareTag: (percent: number): string => `${percent}%`,
     cashSplitLabel: (spent: string, planned: string, free: string): string =>
       `Caja de hoy: pedido ${spent}, en sugeridos ${planned}, libre ${free}`,
     cashEdit: "Corregir el efectivo de la caja",
