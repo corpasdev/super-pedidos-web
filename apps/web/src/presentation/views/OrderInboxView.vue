@@ -293,8 +293,15 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
           >
             {{ openVendor.deliversSameDay ? es.inbox.confirmAndReceive : es.inbox.confirm }}
           </n-button>
-          <!-- Otro día: se revisa, pero se confirma el día que viene el proveedor -->
-          <n-tag v-else round size="large" :bordered="false">{{ es.inbox.confirmOnVisitDay(formatDay(inbox.inbox?.day ?? "")) }}</n-tag>
+          <!-- Otro día: el botón dice solo «Confirmar»; se habilita el día que viene el proveedor (la fecha va en el tooltip) -->
+          <n-tooltip v-else>
+            <template #trigger>
+              <span>
+                <n-button type="primary" size="large" disabled>{{ es.inbox.confirm }}</n-button>
+              </span>
+            </template>
+            {{ es.inbox.confirmOnVisitDay(formatDay(inbox.inbox?.day ?? "")) }}
+          </n-tooltip>
         </n-flex>
       </template>
     </n-drawer-content>
