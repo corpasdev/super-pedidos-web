@@ -10,7 +10,7 @@ import { tablePagination } from "../../tables"
 
 /**
  * Pedido sugerido de un proveedor en tabla: una fila por producto, del más urgente al menos.
- * Columnas: producto (con sus alertas), estado frente a la base, vendido, existencia, a cuánto llega con
+ * Columnas: producto (con su estado frente a la base y sus alertas), vendido, existencia, a cuánto llega con
  * el pedido, base, PD y tope, cantidad (−/+), precio de compra editable, subtotal y hasta dónde llegó la plata.
  */
 const props = defineProps<{
@@ -27,6 +27,12 @@ const STATUS_TYPE: Record<string, TagType> = { below_base: "error", at_base: "wa
 const REACHED_TYPE: Record<string, TagType> = { tope: "success", base: "info", partial: "warning", none: "error" }
 
 const tag = (label: string, type: TagType) => h(NTag, { size: "small", round: true, bordered: false, type }, () => label)
+/** Urgente · En la base · Sobre la base · Sin niveles. */
+const statusTag = (line: SuggestionLine) => {
+  const status = line.stockPosition?.status ?? "no_levels"
+  return tag(es.orderReview.table.statusChips[status] ?? status, STATUS_TYPE[status] ?? "default")
+}
+
 /** Cifra de unidades alineada (— si el producto no tiene ese dato). */
 const units = (value: number | null, strong = false) =>
   value === null ? "—" : h(NText, { class: "tabular-nums", style: strong ? { fontWeight: 700 } : undefined }, () => String(value))
@@ -67,23 +73,9 @@ const columns: DataTableColumns<SuggestionLine> = [
       h(NFlex, { vertical: true, size: 4 }, () => [
         h(NText, { style: { fontWeight: 600 } }, () => line.productName),
         h(NText, { depth: 3, style: { fontSize: "11px", fontFamily: "ui-monospace, monospace" } }, () => line.barcode),
-        // Alertas del producto
-        line.stockPosition?.status === "below_base" || line.isCostEstimated
-          ? h(NFlex, { size: 4 }, () => [
-              line.stockPosition?.status === "below_base" ? tag(es.orderReview.ateBase, "error") : null,
-              line.isCostEstimated ? tag(es.reviewStep.costEstimatedChip, "warning") : null,
-            ])
-          : null,
+        // Alertas del producto: su estado frente a la base y, si aplica, el costo estimado
+        h(NFlex, { size: 4 }, () => [statusTag(line), line.isCostEstimated ? tag(es.reviewStep.costEstimatedChip, "warning") : null]),
       ]),
-  },
-  {
-    key: "status",
-    title: es.orderReview.table.status,
-    width: 130,
-    render: (line) => {
-      const status = line.stockPosition?.status ?? "no_levels"
-      return tag(es.orderReview.table.statusChips[status] ?? status, STATUS_TYPE[status] ?? "default")
-    },
   },
   {
     key: "sold",
@@ -169,7 +161,7 @@ const columns: DataTableColumns<SuggestionLine> = [
       :data="lines"
       :pagination="pagination"
       :row-key="(line: SuggestionLine) => line.productId"
-      :scroll-x="1330"
+      :scroll-x="1200"
       :bordered="true"
       size="small"
     >
