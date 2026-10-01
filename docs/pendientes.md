@@ -8,7 +8,7 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Ventas cargadas: `ventas-semana-2026-09-28-al-2026-10-04.xlsx` (de prueba). Cuando el dueño suba su Excel real, quitar el de prueba con «Quitar».
 
 ## Técnico
-- Trabajo subido en la rama `feat/sugeridos-bandeja-y-catalogo` (6 commits sobre `main`). Falta abrir el pull request y unirla a `main` cuando el dueño lo apruebe.
+- Todo el trabajo está en `main` (merge de `feat/mock-simulacion`, que incluye `feat/sugeridos-bandeja-y-catalogo`, sobre el commit de despliegue en Vercel).
 - Si la API responde 404 en rutas nuevas, reiniciar con `npm run dev:api`.
 
 ## Última tarea hecha
