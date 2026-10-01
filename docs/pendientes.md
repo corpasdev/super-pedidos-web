@@ -5,7 +5,7 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 ## Esperando al dueño
 - Calendario de martes a sábado de los 43 proveedores inactivos (solo está cargado el lunes: 9 proveedores). Se carga con migración, no desde la web.
 - Niveles B, PD y T de cada producto. Mientras falten, el motor repone lo movido (CM).
-- Volver a subir el Excel de ventas (se quitó). Sin él no hay sugeridos.
+- Ventas cargadas: `ventas-mock.xlsx` (de prueba, 24 al 30 de sept). Cuando el dueño suba su Excel real, quitar el de prueba con «Quitar».
 
 ## Técnico
 - Trabajo subido en la rama `feat/sugeridos-bandeja-y-catalogo` (6 commits sobre `main`). Falta abrir el pull request y unirla a `main` cuando el dueño lo apruebe.
@@ -21,9 +21,7 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Se quitó el recuadro «Llegan hoy» de Sugeridos. Los pedidos que entregan otro día quedan pendientes de recibir sin botón en la web (la API `receive` y la store siguen). Decidir con el dueño cómo marcarlos recibidos.
 - Distribución de Sugeridos: arriba Caja, Excel de ventas y Le debes en una fila; debajo, a todo el ancho, la fecha y la grilla de cards.
 - Bento en Sugeridos: «Le debes» a la derecha ocupa las dos filas (crece hacia abajo junto a la grilla de proveedores). Contenedor con grilla de Tailwind porque n-grid no admite celdas de varias filas.
-- Mock de Sugeridos en `data/mock/` (Excel de ventas con el formato del modelo + respuestas de la API por proveedor). Se regenera con `node data/mock/generar.mjs [AAAA-MM-DD]`. No está conectado a la web.
 - Niveles iniciales B/PD/T cargados en Supabase para los 3.752 productos (migración `20260930120000_product_levels_minisuper.sql`): por categoría, precio y rotación del Excel del 16 al 23 de sept. El dueño puede ajustarlos.
-- Mock alineado con Supabase y conectado a la web: abrir con `?mock` (ver `data/mock/README.md`). Falta revisarlo en el navegador.
 - «Productos» visible en el menú. Es una sola tabla con todos los productos; el proveedor es solo una columna (se quitó el filtro por proveedor).
 - Productos es el registro actual: columnas producto, proveedor, unidades actuales, precio de venta, base y tope. Se quitaron «Unidades por compra» (packSize, ya no se edita en la web) y «Punto de pedido». Ninguna existencia está contada aún (977 con unidades > 0 vienen del catálogo importado).
 - Productos: precio de compra y de venta editables en la tabla (autoguardado). La API acepta `salePrice` en PATCH /products/:id/settings y guarda `sale_price`. Hay que reiniciar la API (`npm run dev:api`) para usarlo.
@@ -32,4 +30,4 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Crear proveedor pide todos los datos de la tabla (NIT, correo, días de pedido y entrega, frecuencia, mínimo, tope) y crea su visita en supplier_sellers, así sale en Sugeridos.
 - Tabla de Proveedores sin «Próxima visita» ni «Último pedido» (ocultas por ahora).
 - «Vencidos para cambio» en Sugeridos (columna derecha, bajo Le debes): tabla expired_exchanges (migración 20261001120000), API /expired-exchanges. Reiniciar la API.
-- Rama `feat/mock-simulacion`: `npm run dev:mock` simula todo el software (Sugeridos, Productos, Proveedores, vencidos, caja y sesión) sin API ni Supabase. Falta revisarlo en el navegador.
+- Rama `feat/mock-simulacion`: ventas de prueba con los productos de Supabase (`npm run mock:ventas --workspace apps/api`, ver `data/mock/README.md`). Ya cargadas: el lunes 5-oct el agente arma 7 pedidos (Arepas German y Cenneca sin productos). Se quitó la simulación sin API.
