@@ -85,6 +85,7 @@ export const es = {
     reload: "Actualizar",
     cashShort: "Caja",
     cashToday: "Caja hoy",
+    cashDebtSegment: (amount: string): string => `Para pagar lo que se debe · ${amount}`,
     invoiceBalance: (amount: string): string => `saldo ${amount}`,
     cashShareTag: (percent: number): string => `${percent}%`,
     cashSplitLabel: (spent: string, planned: string, free: string): string =>

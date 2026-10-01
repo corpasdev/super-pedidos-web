@@ -4,6 +4,7 @@ import {
   arrivalsDueOn,
   isoWeekdayOfDay,
   debtsBySupplier,
+  debtReserveFor,
   pendingInvoicesBySupplier,
   deliversSameDay,
   expectedDeliveryDay,
@@ -82,6 +83,8 @@ export interface Inbox {
   /** Hoy en la tienda (la caja, las llegadas y las deudas son siempre de hoy). */
   today: string
   cash: DailyCash
+  /** Plata de la caja apartada para pagar lo que se les debe a los proveedores del día. */
+  debtReserve: number
   vendors: InboxVendor[]
   arrivals: InboxArrival[]
   debts: InboxDebt[]
@@ -130,8 +133,14 @@ export class InboxService {
     ])
     const nameOf = (supplierId: string): string => supplierNames.get(supplierId) ?? "Proveedor"
 
-    // La caja es una sola para todo el día: cada pedido sale de lo que quedó después de los anteriores.
-    let cashLeft = cash.remainingAmount
+    // La caja es una sola para todo el día. Primero se aparta lo que se les debe a los proveedores que vienen
+    // (se les paga cuando llegan); con el resto, cada pedido sale de lo que quedó después de los anteriores.
+    const visitsToday = visitsOnDay(day)(sellers)
+    const debtReserve =
+      cash.remainingAmount === null
+        ? 0
+        : Math.min(cash.remainingAmount, debtReserveFor(new Set(visitsToday.map((visit) => visit.supplierId)), today)(orders))
+    let cashLeft = cash.remainingAmount === null ? null : cash.remainingAmount - debtReserve
 
     const buildVendor = async (visit: SellerVisit): Promise<InboxVendor> => {
       const existing = orderOfSupplierOn(day)(visit.supplierId)(orders)
@@ -155,7 +164,6 @@ export class InboxService {
 
     // El agente corre para cada vendedor sin pedido hoy, uno tras otro: con caja abierta, cada uno
     // necesita saber cuánto dejó el anterior. Sin caja, no hay reparto y se calculan de a 4 a la vez.
-    const visitsToday = visitsOnDay(day)(sellers)
     const vendors: InboxVendor[] = []
     const batch = cashLeft === null ? CONCURRENCY : 1
     for (let start = 0; start < visitsToday.length; start += batch) {
@@ -180,6 +188,7 @@ export class InboxService {
       day,
       today,
       cash,
+      debtReserve,
       // Primero los que faltan por pedir.
       vendors: vendors.sort((left, right) => Number(left.orderToday !== null) - Number(right.orderToday !== null)),
       arrivals,

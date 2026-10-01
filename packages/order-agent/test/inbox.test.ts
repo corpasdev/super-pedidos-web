@@ -7,7 +7,7 @@ import {
   visitsOnDay,
   type SellerVisit,
 } from "../src/inbox/visits.js"
-import { arrivalsDueOn, debtsBySupplier, orderOfSupplierOn, pendingInvoicesBySupplier, type InboxOrder } from "../src/inbox/ledger.js"
+import { arrivalsDueOn, debtReserveFor, debtsBySupplier, orderOfSupplierOn, pendingInvoicesBySupplier, type InboxOrder } from "../src/inbox/ledger.js"
 
 const visit = (overrides: Partial<SellerVisit> = {}): SellerVisit => ({
   id: "v",
@@ -79,6 +79,16 @@ describe("bandeja: llegadas y deudas", () => {
       ["vieja", 120_000],
       ["nueva", 40_000],
     ])
+  })
+
+  it("aparta de la caja lo que se les debe a los que vienen (sin contar los pedidos de hoy)", () => {
+    const orders = [
+      order({ supplierId: "viene", orderDay: "2026-09-21", pendingAmount: 186_400 }),
+      order({ supplierId: "viene", orderDay: "2026-09-28", pendingAmount: 82_750 }),
+      order({ supplierId: "viene", orderDay: "2026-10-05", pendingAmount: 50_000 }),
+      order({ supplierId: "no-viene", orderDay: "2026-09-24", pendingAmount: 25_988 }),
+    ]
+    expect(debtReserveFor(new Set(["viene"]), "2026-10-05")(orders)).toBe(269_150)
   })
 
   it("deuda por distribuidor", () => {

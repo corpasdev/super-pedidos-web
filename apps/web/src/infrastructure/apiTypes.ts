@@ -343,6 +343,8 @@ export interface InboxItem {
   /** Hoy en la tienda (la caja, las llegadas y las deudas son de hoy). */
   today: string
   cash: DailyCashItem
+  /** Plata de la caja apartada para pagar lo que se les debe a los proveedores del día. */
+  debtReserve: number
   vendors: InboxVendorItem[]
   arrivals: InboxArrivalItem[]
   debts: InboxDebtItem[]

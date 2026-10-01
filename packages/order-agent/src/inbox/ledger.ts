@@ -42,6 +42,16 @@ export const pendingInvoicesBySupplier = (orders: readonly InboxOrder[]): Readon
       new Map<string, PendingInvoice[]>(),
     )
 
+/**
+ * Plata de la caja que se aparta para pagar las facturas pendientes de los proveedores que vienen ese día
+ * (regla del dueño: lo que se les debe se paga de la caja antes de repartirla en los sugeridos).
+ * Solo cuentan los pedidos de días anteriores a hoy: los de hoy ya están descontados de la caja.
+ */
+export const debtReserveFor = (supplierIds: ReadonlySet<string>, today: string) => (orders: readonly InboxOrder[]): number =>
+  orders
+    .filter((order) => order.pendingAmount > 0 && order.orderDay < today && supplierIds.has(order.supplierId))
+    .reduce((total, order) => total + order.pendingAmount, 0)
+
 /** Lo que se le debe a cada distribuidor: Σ pendiente por pagar de sus pedidos. */
 export const debtsBySupplier = (orders: readonly InboxOrder[]): ReadonlyMap<string, number> =>
   orders

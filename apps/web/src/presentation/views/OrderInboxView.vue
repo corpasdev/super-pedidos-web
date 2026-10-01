@@ -162,6 +162,7 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
         :cash="inbox.inbox?.cash ?? null"
         :saving="wizard.dailyCashLoading"
         :segments="cashSegments"
+        :debt-reserve="inbox.inbox?.debtReserve ?? 0"
         @open="openCash"
       />
     </div>

@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from "vue"
 import { CreateOutline } from "@vicons/ionicons5"
 import type { InputNumberInst } from "naive-ui"
 import type { DailyCashItem } from "../../../infrastructure/apiTypes"
-import { palette } from "../../../theme/naiveOverrides"
+import { DEBT_COLOR, palette } from "../../../theme/naiveOverrides"
 import { es } from "../../../i18n/es"
 import { formatMoney, moneyFormatter, moneyParser } from "../../../i18n/format"
 import { moneyInputProps } from "../../numericInput"
@@ -22,7 +22,7 @@ export interface CashSegment {
 }
 
 /** `segments`: el reparto de la caja entre los sugeridos pendientes, en el orden en que se armaron. */
-const props = defineProps<{ cash: DailyCashItem | null; saving?: boolean; segments?: CashSegment[] }>()
+const props = defineProps<{ cash: DailyCashItem | null; saving?: boolean; segments?: CashSegment[]; debtReserve?: number }>()
 const emit = defineEmits<{ open: [amount: number] }>()
 
 const input = ref<InputNumberInst | null>(null)
@@ -34,8 +34,12 @@ const shownAmount = computed(() => (hasCash.value ? (props.cash!.remainingAmount
 const opening = computed(() => (hasCash.value ? props.cash!.openingAmount! : 0))
 const spent = computed(() => (hasCash.value ? props.cash!.spentAmount : 0))
 const segments = computed(() => props.segments ?? [])
-const planned = computed(() => Math.min(segments.value.reduce((sum, segment) => sum + segment.amount, 0), Math.max(0, opening.value - spent.value)))
-const free = computed(() => Math.max(0, opening.value - spent.value - planned.value))
+/** Apartado para pagar deudas de los proveedores del día (va antes que los sugeridos). */
+const debtReserve = computed(() => Math.min(props.debtReserve ?? 0, Math.max(0, opening.value - spent.value)))
+const planned = computed(() =>
+  Math.min(segments.value.reduce((sum, segment) => sum + segment.amount, 0), Math.max(0, opening.value - spent.value - debtReserve.value)),
+)
+const free = computed(() => Math.max(0, opening.value - spent.value - debtReserve.value - planned.value))
 const percentOf = (value: number): string => (opening.value > 0 ? `${Math.min(100, (value / opening.value) * 100)}%` : "0%")
 /** Al corregir por debajo de lo ya pedido hoy, la caja queda en $0: se avisa mientras se escribe. */
 const belowSpent = computed(() => draft.value !== null && props.cash !== null && draft.value < props.cash.spentAmount)
@@ -145,6 +149,13 @@ const bareInput = {
           :style="{ display: 'flex', height: '8px', borderRadius: '999px', overflow: 'hidden', background: 'rgba(253,253,253,0.18)' }"
         >
           <span :style="{ width: percentOf(spent), background: palette.accent, transition: 'width .3s' }" />
+          <!-- Apartado para pagar lo que se debe a los proveedores del día -->
+          <n-tooltip v-if="debtReserve > 0" placement="bottom">
+            <template #trigger>
+              <span :style="{ width: percentOf(debtReserve), background: DEBT_COLOR, transition: 'width .3s', cursor: 'default' }" />
+            </template>
+            {{ es.inbox.cashDebtSegment(formatMoney(debtReserve)) }}
+          </n-tooltip>
           <!-- Un tramo por sugerido, con el color de su tarjeta -->
           <n-tooltip v-for="segment in segments" :key="segment.sellerId" placement="bottom">
             <template #trigger>

@@ -9,7 +9,9 @@ import type { GlobalThemeOverrides } from "naive-ui"
  * Colores para distinguir los sugeridos del día en la barra de caja y en su tarjeta.
  * Claros para leerse sobre el verde profundo de la caja; el lima queda para lo ya pedido.
  */
-export const SUGGESTION_COLORS = ["#8FD9B6", "#7CC4F2", "#F5C451", "#F28C7C", "#B9A3F0", "#4FD1C5", "#F49AC1", "#C9D86B"] as const
+export const SUGGESTION_COLORS = ["#8FD9B6", "#7CC4F2", "#F5C451", "#B9A3F0", "#4FD1C5", "#F49AC1", "#C9D86B"] as const
+/** Tramo de la caja apartado para pagar lo que se debe (coral, distinto de los sugeridos). */
+export const DEBT_COLOR = "#F28C7C"
 
 export const palette = {
   brandDeep: "#013F32",
