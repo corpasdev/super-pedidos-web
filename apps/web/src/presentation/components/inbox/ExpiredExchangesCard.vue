@@ -141,7 +141,6 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
               <n-flex align="center" :size="6" :wrap="false">
                 <n-text depth="3" class="tabular-nums" :style="{ fontSize: '12px', whiteSpace: 'nowrap' }">{{ es.inbox.expired.unitsLabel(exchange.units) }}</n-text>
                 <n-ellipsis depth="3" :style="{ fontSize: '12px' }">{{ exchange.supplierName ?? es.inbox.expired.noSupplier }}</n-ellipsis>
-                <n-tag v-if="comingToday.has(exchange.supplierId ?? '')" size="tiny" round :bordered="false" type="success">{{ es.inbox.expired.comingToday }}</n-tag>
               </n-flex>
             </n-flex>
             <n-flex :size="2" :wrap="false" align="center">

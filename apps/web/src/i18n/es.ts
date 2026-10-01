@@ -99,7 +99,6 @@ export const es = {
       add: "Anotar vencido",
       unitsLabel: (units: number): string => `${units} u`,
       noSupplier: "Sin proveedor",
-      comingToday: "Viene hoy",
       exchanged: "Cambiado",
       remove: "Quitar de la lista",
       empty: "No hay vencidos pendientes.",
