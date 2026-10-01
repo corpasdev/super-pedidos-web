@@ -32,3 +32,4 @@ Estado entre tareas. Cada sesión arranca con la ventana limpia: leer esto al em
 - Crear proveedor pide todos los datos de la tabla (NIT, correo, días de pedido y entrega, frecuencia, mínimo, tope) y crea su visita en supplier_sellers, así sale en Sugeridos.
 - Tabla de Proveedores sin «Próxima visita» ni «Último pedido» (ocultas por ahora).
 - «Vencidos para cambio» en Sugeridos (columna derecha, bajo Le debes): tabla expired_exchanges (migración 20261001120000), API /expired-exchanges. Reiniciar la API.
+- Rama `feat/mock-simulacion`: `npm run dev:mock` simula todo el software (Sugeridos, Productos, Proveedores, vencidos, caja y sesión) sin API ni Supabase. Falta revisarlo en el navegador.
