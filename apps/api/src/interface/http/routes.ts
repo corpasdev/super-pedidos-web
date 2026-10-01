@@ -1,6 +1,7 @@
 ﻿import { Router, type Request } from "express"
 import multer from "multer"
-import type { ReplenishmentMode } from "@agente-pedidos/order-agent"
+import { deliversSameDay, expectedDeliveryDay, type ReplenishmentMode } from "@agente-pedidos/order-agent"
+import { storeDayOf } from "../../application/DailyCashService.js"
 import type { Container } from "../../container.js"
 import { LOGO_MAX_BYTES, StoreLogoRejectedError, isAllowedLogoType } from "../../application/StoreProfileService.js"
 import {
@@ -8,15 +9,20 @@ import {
   confirmOrderBodySchema,
   countStockBodySchema,
   createStoreBodySchema,
+  inboxDayQuerySchema,
   openDailyCashBodySchema,
   updateOrderPaymentBodySchema,
   updateStoreProfileBodySchema,
   updateProductSettingsBodySchema,
+  createProductBodySchema,
+  createSupplierBodySchema,
+  createExpiredExchangeBodySchema,
   updateReportSettingsBodySchema,
   updateSupplierBodySchema,
 } from "./schemas.js"
 import { requireAuthenticatedOwner, requireStore, type AuthenticatedRequest } from "./middlewares.js"
 import {
+  agentDecisionPresenter,
   dataQualityIssuePresenter,
   orderSuggestionPresenter,
   productPresenter,
@@ -110,6 +116,16 @@ export const buildApiRouter = (container: Container): Router => {
     res.json({ suppliers: sources.map(supplierPresenter) })
   })
 
+  router.post("/suppliers", requireStore, async (req, res) => {
+    const body = createSupplierBodySchema.parse(req.body)
+    const id = await container.catalogEntryService.createSupplier(storeIdOf(req), {
+      ...body,
+      taxId: body.taxId ?? null,
+      contactEmail: body.contactEmail || null,
+    })
+    res.status(201).json({ id })
+  })
+
   router.patch("/suppliers/:supplierId", requireStore, async (req, res) => {
     const storeId = storeIdOf(req)
     const body = updateSupplierBodySchema.parse(req.body)
@@ -132,6 +148,12 @@ export const buildApiRouter = (container: Container): Router => {
   router.get("/products", requireStore, async (req, res) => {
     const rows = await container.productRepository.listAllWithNames(storeIdOf(req))
     res.json({ products: rows.map((row) => productPresenter(row.product, row.brandName, row.supplierName)) })
+  })
+
+  router.post("/products", requireStore, async (req, res) => {
+    const body = createProductBodySchema.parse(req.body)
+    const id = await container.catalogEntryService.createProduct(storeIdOf(req), body)
+    res.status(201).json({ id })
   })
 
   router.patch("/products/:productId/settings", requireStore, async (req, res) => {
@@ -179,6 +201,28 @@ export const buildApiRouter = (container: Container): Router => {
     })
   })
 
+  // Reemplazar un Excel por otro: el nuevo se valida antes de quitar el anterior.
+  router.post("/sales-reports/:reportId/replace", requireStore, upload.single("file"), async (req, res) => {
+    const storeId = storeIdOf(req)
+    if (!req.file) throw new Error("Envía el archivo en el campo 'file'.")
+    const result = await container.salesReportImportService.import(
+      storeId,
+      { buffer: req.file.buffer, originalName: req.file.originalname },
+      { replacingReportId: param(req, "reportId") },
+    )
+    res.status(201).json({
+      report: salesReportPresenter(result.report),
+      unmatchedSales: result.unmatchedSales.map(dataQualityIssuePresenter),
+    })
+  })
+
+  // Quitar un Excel de ventas (y sus ventas por día).
+  router.delete("/sales-reports/:reportId", requireStore, async (req, res) => {
+    const storeId = storeIdOf(req)
+    await container.salesReportImportService.remove(storeId, param(req, "reportId"))
+    res.json({ report: salesReportPresenter(await container.salesReportRepository.findLatest(storeId)) })
+  })
+
   router.get("/sales-reports/latest", requireStore, async (req, res) => {
     const storeId = storeIdOf(req)
     const report = await container.salesReportRepository.findLatest(storeId)
@@ -221,14 +265,14 @@ export const buildApiRouter = (container: Container): Router => {
   router.post("/order-suggestions/suppliers/:supplierId", requireStore, async (req, res) => {
     const storeId = storeIdOf(req)
     const body = buildSuggestionBodySchema.parse(req.body)
-    const { suggestion, budget } = await container.orderSuggestionService.buildSuggestion({
+    const { suggestion, budget, decision } = await container.orderSuggestionService.buildSuggestion({
       storeId,
       supplierId: param(req, "supplierId"),
       budgetPesos: body.budgetPesos ?? null,
       replenishmentMode: body.replenishmentMode as ReplenishmentMode,
       unitCostOverrides: body.unitCostOverrides,
     })
-    res.json({ suggestion: orderSuggestionPresenter(suggestion), budget })
+    res.json({ suggestion: orderSuggestionPresenter(suggestion), budget, decision: agentDecisionPresenter(decision) })
   })
 
   router.post("/order-suggestions/suppliers/:supplierId/confirm", requireStore, async (req, res) => {
@@ -247,18 +291,65 @@ export const buildApiRouter = (container: Container): Router => {
         suggestion = suggestion.withOwnerUnits(adjustment.productId, adjustment.units)
       }
     }
-    const order = await container.purchaseOrderService.confirm(storeId, suggestion)
+    // El vendedor define cuándo llega; si entrega en el acto, confirmar = recibir (lo decide el servidor, no la web).
+    const seller = body.sellerId === undefined ? null : await container.sellerRepository.findById(storeId, body.sellerId)
+    const today = storeDayOf(new Date()).cashDate
+    const receivesNow = seller !== null && deliversSameDay(seller)
+    const order = await container.purchaseOrderService.confirm(storeId, suggestion, {
+      sellerId: seller?.id ?? null,
+      expectedDeliveryDay: seller === null ? null : expectedDeliveryDay(seller)(today),
+    })
+    if (receivesNow) {
+      await container.truckDeliveryService.finalize(storeId, order.id)
+      if (body.paidNow === true && order.totalCost.pesos > 0) {
+        await container.orderPaymentService.update(storeId, order.id, { settled: true })
+      }
+    }
     res
       .status(201)
       .json({
         order: purchaseOrderPresenter(order),
+        received: receivesNow,
+        paid: receivesNow && body.paidNow === true,
         suggestion: orderSuggestionPresenter(suggestion),
         budget: built.budget,
+        decision: agentDecisionPresenter(built.decision),
         dailyCash: await container.dailyCashService.today(storeId),
       })
   })
 
+  // Bandeja del día: vendedores que vienen hoy con su pedido listo, llegadas y deudas por distribuidor.
+  router.get("/inbox/today", requireStore, async (req, res) => {
+    const day = inboxDayQuerySchema.parse(req.query.day)
+    res.json({ inbox: await container.inboxService.today(storeIdOf(req), new Date(), day) })
+  })
+
+  // Próximos 7 días con cuántos proveedores vienen (tags de la bandeja).
+  router.get("/inbox/days", requireStore, async (req, res) => {
+    res.json({ days: await container.inboxService.upcomingDays(storeIdOf(req)) })
+  })
+
   // Caja del día: el efectivo al abrir; cada pedido confirmado hoy se descuenta.
+  // Vencidos para cambio: pendientes hasta que el proveedor los cambia.
+  router.get("/expired-exchanges", requireStore, async (req, res) => {
+    res.json({ exchanges: await container.expiredExchangeService.listPending(storeIdOf(req)) })
+  })
+
+  router.post("/expired-exchanges", requireStore, async (req, res) => {
+    const body = createExpiredExchangeBodySchema.parse(req.body)
+    res.status(201).json({ exchange: await container.expiredExchangeService.add(storeIdOf(req), body) })
+  })
+
+  router.post("/expired-exchanges/:exchangeId/exchanged", requireStore, async (req, res) => {
+    await container.expiredExchangeService.markExchanged(storeIdOf(req), param(req, "exchangeId"))
+    res.json({ ok: true })
+  })
+
+  router.delete("/expired-exchanges/:exchangeId", requireStore, async (req, res) => {
+    await container.expiredExchangeService.remove(storeIdOf(req), param(req, "exchangeId"))
+    res.json({ ok: true })
+  })
+
   router.get("/daily-cash/today", requireStore, async (req, res) => {
     res.json({ dailyCash: await container.dailyCashService.today(storeIdOf(req)) })
   })

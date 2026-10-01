@@ -131,6 +131,61 @@ export type Database = {
           },
         ]
       }
+      expired_exchanges: {
+        Row: {
+          created_at: string
+          exchanged_at: string | null
+          id: string
+          product_id: string
+          status: string
+          store_id: string
+          supplier_id: string | null
+          units: number
+        }
+        Insert: {
+          created_at?: string
+          exchanged_at?: string | null
+          id?: string
+          product_id: string
+          status?: string
+          store_id: string
+          supplier_id?: string | null
+          units: number
+        }
+        Update: {
+          created_at?: string
+          exchanged_at?: string | null
+          id?: string
+          product_id?: string
+          status?: string
+          store_id?: string
+          supplier_id?: string | null
+          units?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expired_exchanges_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expired_exchanges_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expired_exchanges_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_movements: {
         Row: {
           id: string
@@ -185,6 +240,8 @@ export type Database = {
       }
       product_settings: {
         Row: {
+          min_stock_units: number | null
+          reorder_point_units: number | null
           cost_source: string
           is_estimated: boolean
           max_stock_units: number | null
@@ -195,6 +252,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          min_stock_units?: number | null
+          reorder_point_units?: number | null
           cost_source?: string
           is_estimated?: boolean
           max_stock_units?: number | null
@@ -205,6 +264,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          min_stock_units?: number | null
+          reorder_point_units?: number | null
           cost_source?: string
           is_estimated?: boolean
           max_stock_units?: number | null
@@ -306,6 +367,12 @@ export type Database = {
       }
       purchase_order_lines: {
         Row: {
+          estimated_stock: number | null
+          max_stock_units: number | null
+          min_stock_units: number | null
+          moved_units: number | null
+          reorder_point_units: number | null
+          units_above_base: number | null
           id: string
           product_id: string
           purchase_order_id: string
@@ -315,6 +382,12 @@ export type Database = {
           was_adjusted_by_owner: boolean
         }
         Insert: {
+          estimated_stock?: number | null
+          max_stock_units?: number | null
+          min_stock_units?: number | null
+          moved_units?: number | null
+          reorder_point_units?: number | null
+          units_above_base?: number | null
           id?: string
           product_id: string
           purchase_order_id: string
@@ -324,6 +397,12 @@ export type Database = {
           was_adjusted_by_owner?: boolean
         }
         Update: {
+          estimated_stock?: number | null
+          max_stock_units?: number | null
+          min_stock_units?: number | null
+          moved_units?: number | null
+          reorder_point_units?: number | null
+          units_above_base?: number | null
           id?: string
           product_id?: string
           purchase_order_id?: string
@@ -358,6 +437,8 @@ export type Database = {
       }
       purchase_orders: {
         Row: {
+          expected_delivery_date: string | null
+          seller_id: string | null
           available_budget: number | null
           created_at: string
           id: string
@@ -374,6 +455,8 @@ export type Database = {
           total_cost: number
         }
         Insert: {
+          expected_delivery_date?: string | null
+          seller_id?: string | null
           available_budget?: number | null
           created_at?: string
           id?: string
@@ -388,6 +471,8 @@ export type Database = {
           total_cost: number
         }
         Update: {
+          expected_delivery_date?: string | null
+          seller_id?: string | null
           available_budget?: number | null
           created_at?: string
           id?: string
@@ -421,6 +506,41 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sales_daily: {
+        Row: {
+          barcode: string
+          product_name: string | null
+          sales_report_id: string | null
+          sold_on: string
+          store_id: string
+          units_sold: number
+        }
+        Insert: {
+          barcode: string
+          product_name?: string | null
+          sales_report_id?: string | null
+          sold_on: string
+          store_id: string
+          units_sold: number
+        }
+        Update: {
+          barcode?: string
+          product_name?: string | null
+          sales_report_id?: string | null
+          sold_on?: string
+          store_id?: string
+          units_sold?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_daily_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "stores"
             referencedColumns: ["id"]
           },
         ]
@@ -556,6 +676,56 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_sellers: {
+        Row: {
+          biweekly_anchor_date: string | null
+          created_at: string
+          delivery_weekday: number
+          id: string
+          is_active: boolean
+          order_weekday: number
+          seller_name: string | null
+          store_id: string
+          supplier_id: string
+          updated_at: string
+          visit_frequency: string
+        }
+        Insert: {
+          biweekly_anchor_date?: string | null
+          created_at?: string
+          delivery_weekday: number
+          id?: string
+          is_active?: boolean
+          order_weekday: number
+          seller_name?: string | null
+          store_id: string
+          supplier_id: string
+          updated_at?: string
+          visit_frequency?: string
+        }
+        Update: {
+          biweekly_anchor_date?: string | null
+          created_at?: string
+          delivery_weekday?: number
+          id?: string
+          is_active?: boolean
+          order_weekday?: number
+          seller_name?: string | null
+          store_id?: string
+          supplier_id?: string
+          updated_at?: string
+          visit_frequency?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_sellers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           biweekly_anchor_date: string | null
@@ -573,6 +743,7 @@ export type Database = {
           tax_id: string | null
           updated_at: string
           visit_frequency: string | null
+          whatsapp_number: string | null
         }
         Insert: {
           biweekly_anchor_date?: string | null
@@ -590,6 +761,7 @@ export type Database = {
           tax_id?: string | null
           updated_at?: string
           visit_frequency?: string | null
+          whatsapp_number?: string | null
         }
         Update: {
           biweekly_anchor_date?: string | null
@@ -607,6 +779,7 @@ export type Database = {
           tax_id?: string | null
           updated_at?: string
           visit_frequency?: string | null
+          whatsapp_number?: string | null
         }
         Relationships: [
           {

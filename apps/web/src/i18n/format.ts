@@ -6,6 +6,28 @@ const DATE_FORMAT = new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "s
 
 export const formatDate = (iso: string): string => DATE_FORMAT.format(new Date(iso))
 
+/** Día YYYY-MM-DD (sin hora): se arma en hora local para no correrse un día por la zona horaria. */
+export const formatDay = (day: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return ""
+  const [year, month, dayOfMonth] = day.split("-").map(Number)
+  return DATE_FORMAT.format(new Date(year ?? 0, (month ?? 1) - 1, dayOfMonth ?? 1))
+}
+
+/** «21/09/2026» a partir de "2026-09-21" (día/mes/año). */
+export const formatShortDay = (day: string): string => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day)
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : ""
+}
+
+const LONG_DATE_FORMAT = new Intl.DateTimeFormat("es-CO", { weekday: "long", day: "numeric", month: "long" })
+
+/** «miércoles, 30 de septiembre» a partir de "2026-09-30". */
+export const formatLongDay = (day: string): string => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return ""
+  const [year, month, dayOfMonth] = day.split("-").map(Number)
+  return LONG_DATE_FORMAT.format(new Date(year ?? 0, (month ?? 1) - 1, dayOfMonth ?? 1))
+}
+
 const WEEKDAY_LABELS = ["", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"] as const
 
 export const weekdayLabel = (weekday: number): string => WEEKDAY_LABELS[weekday] ?? ""
@@ -22,7 +44,11 @@ export const formatSupplyUnits = (units: number): string => `${units.toLocaleStr
 
 export const shortId = (id: string): string => id.slice(0, 8)
 
-/** Formato de entrada para n-input-number en pesos: "$25.988". */
+/**
+ * Pesos colombianos en n-input-number: se pasan como `:format="moneyFormatter"` y `:parse="moneyParser"`
+ * (en Naive UI las props se llaman format/parse; `formatter`/`parser` no existen y se ignoran).
+ * Muestra "$25.988": signo de pesos, punto de miles y sin decimales.
+ */
 export const moneyFormatter = (value: number | null): string => (value === null ? "" : formatMoney(value))
 
 /** Parser de pesos: ignora símbolos y separadores, deja solo dígitos. */

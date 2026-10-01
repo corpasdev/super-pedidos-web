@@ -202,7 +202,7 @@ const todayColumns: DataTableColumns<TodaySupplierRow> = [
     align: "right",
     render: (row) =>
       row.orderToday !== null
-        ? h(NButton, { size: "small", secondary: true, onClick: () => router.push("/historial") }, () => es.dashboard.todayViewButton)
+        ? h(NButton, { size: "small", secondary: true, onClick: () => router.push("/pedidos") }, () => es.dashboard.todayViewButton)
         : h(
             NButton,
             { size: "small", type: "primary", onClick: () => makeOrder(row.supplier.id) },
@@ -359,7 +359,7 @@ const todayColumns: DataTableColumns<TodaySupplierRow> = [
         <n-flex vertical :size="14" :style="{ height: '100%' }">
           <n-flex justify="space-between" align="center">
             <n-text :style="cardTitleStyle">{{ es.dashboard.transitTitle }}</n-text>
-            <n-button text size="tiny" icon-placement="right" @click="router.push('/historial')">
+            <n-button text size="tiny" icon-placement="right" @click="router.push('/pedidos')">
               {{ es.dashboard.viewHistory }}
               <template #icon><n-icon :component="ChevronForward" /></template>
             </n-button>

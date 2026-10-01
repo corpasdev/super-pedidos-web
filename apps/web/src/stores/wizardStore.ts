@@ -1,7 +1,8 @@
 import { computed, ref } from "vue"
-import { defineStore } from "pinia"
+import { acceptHMRUpdate, defineStore } from "pinia"
 import { apiClient } from "../infrastructure/apiClient"
 import type {
+  AgentDecisionItem,
   BuildSuggestionResponse,
   ConfirmOrderResponse,
   DailyCashItem,
@@ -32,7 +33,8 @@ export const useWizardStore = defineStore("wizard", () => {
   const reportLoading = ref(false)
   const unmatchedSalesCount = ref(0)
 
-  const replenishmentMode = ref<ReplenishmentMode>("fill_to_base")
+  /** Modelo del dueño: niveles B < PD < T y CM; la plata decide si llega a la base, al tope o hasta donde alcance. */
+  const replenishmentMode = ref<ReplenishmentMode>("levels")
   /** Límite opcional que el dueño escribe para este pedido (además de la caja y el tope del proveedor). */
   const budgetPesos = ref<number | null>(null)
 
@@ -45,6 +47,8 @@ export const useWizardStore = defineStore("wizard", () => {
 
   const suggestion = ref<SuggestionResponse | null>(null)
   const orderBudget = ref<OrderBudgetItem | null>(null)
+  /** Qué decidió el agente: qué permitió la plata y cuántos productos están bajo la base. */
+  const agentDecision = ref<AgentDecisionItem | null>(null)
   const suggestionLoading = ref(false)
 
   /** Precio que dio el vendedor para ESTE pedido (productId → pesos). No se guarda en el producto: el costo varía. */
@@ -114,6 +118,38 @@ export const useWizardStore = defineStore("wizard", () => {
    * Calcula el pedido en el servidor. Al entrar a revisar se parte de cero; al recalcular por un cambio
    * de costo (`keepOwnerChanges`) se conservan las cantidades y los costos que el dueño ya escribió.
    */
+  /** Reemplaza el Excel cargado por otro (la API valida el nuevo antes de quitar el anterior). */
+  async function replaceReport(reportId: string, file: File): Promise<void> {
+    reportLoading.value = true
+    actionError.value = null
+    try {
+      const response = await apiClient.postFile<{ report: SalesReportItem; unmatchedSales: { issueCode: string }[] }>(
+        `/sales-reports/${reportId}/replace`,
+        file,
+        file.name,
+      )
+      uploadedReport.value = response.report
+      latestReport.value = response.report
+      unmatchedSalesCount.value = response.unmatchedSales.length
+    } finally {
+      reportLoading.value = false
+    }
+  }
+
+  /** Quita el Excel de ventas; queda como más reciente el anterior (o ninguno). */
+  async function removeReport(reportId: string): Promise<void> {
+    reportLoading.value = true
+    actionError.value = null
+    try {
+      const response = await apiClient.delete<{ report: SalesReportItem | null }>(`/sales-reports/${reportId}`)
+      latestReport.value = response.report
+      uploadedReport.value = null
+      unmatchedSalesCount.value = 0
+    } finally {
+      reportLoading.value = false
+    }
+  }
+
   async function buildSuggestion(options: { keepOwnerChanges?: boolean } = {}): Promise<void> {
     if (selectedSupplierId.value === null) return
     suggestionLoading.value = true
@@ -131,6 +167,7 @@ export const useWizardStore = defineStore("wizard", () => {
       })
       suggestion.value = response.suggestion
       orderBudget.value = response.budget
+      agentDecision.value = response.decision
     } catch (error) {
       actionError.value = error instanceof Error ? error.message : "No se pudo calcular el pedido sugerido."
       throw error
@@ -150,7 +187,12 @@ export const useWizardStore = defineStore("wizard", () => {
     ownerTouched.value = new Set(ownerTouched.value).add(productId)
   }
 
-  async function confirmOrder(): Promise<void> {
+  /** Vendedor que tomó el pedido (bandeja): define cuándo llega y si se recibe en el acto. */
+  const selectedSellerId = ref<string | null>(null)
+  /** Resultado del último confirmar: si quedó recibido y pagado (entrega en el acto). */
+  const lastConfirm = ref<{ received: boolean; paid: boolean } | null>(null)
+
+  async function confirmOrder(options: { paidNow?: boolean } = {}): Promise<void> {
     if (selectedSupplierId.value === null || suggestion.value === null) return
     actionError.value = null
     const adjustments = [...ownerTouched.value].map((productId) => ({
@@ -161,13 +203,17 @@ export const useWizardStore = defineStore("wizard", () => {
       replenishmentMode: replenishmentMode.value,
       budgetPesos: budgetPesos.value,
       unitCostOverrides: unitCostOverridesPayload(),
+      ...(selectedSellerId.value !== null ? { sellerId: selectedSellerId.value } : {}),
+      ...(options.paidNow !== undefined ? { paidNow: options.paidNow } : {}),
       ...(adjustments.length > 0 ? { adjustments } : {}),
     }
     const response = await apiClient.post<ConfirmOrderResponse>(`${SUGGESTION_PATH(selectedSupplierId.value)}/confirm`, body)
     order.value = response.order
     suggestion.value = response.suggestion
     orderBudget.value = response.budget
+    agentDecision.value = response.decision
     dailyCash.value = response.dailyCash
+    lastConfirm.value = { received: response.received, paid: response.paid }
   }
 
   async function loadDailyCash(): Promise<void> {
@@ -221,11 +267,14 @@ export const useWizardStore = defineStore("wizard", () => {
 
   function reset(): void {
     selectedSupplierId.value = null
-    replenishmentMode.value = "fill_to_base"
+    replenishmentMode.value = "levels"
     budgetPesos.value = null
     baseProducts.value = []
     suggestion.value = null
     orderBudget.value = null
+    agentDecision.value = null
+    selectedSellerId.value = null
+    lastConfirm.value = null
     ownerUnits.value = {}
     ownerTouched.value = new Set()
     unitCostOverrides.value = {}
@@ -254,6 +303,9 @@ export const useWizardStore = defineStore("wizard", () => {
     baseProductsLoading,
     suggestion,
     orderBudget,
+    agentDecision,
+    selectedSellerId,
+    lastConfirm,
     suggestionLoading,
     ownerUnits,
     ownerTouched,
@@ -264,6 +316,8 @@ export const useWizardStore = defineStore("wizard", () => {
     loadSuppliers,
     loadLatestReport,
     uploadReport,
+    replaceReport,
+    removeReport,
     buildSuggestion,
     setOwnerUnits,
     setUnitCost,
@@ -276,3 +330,6 @@ export const useWizardStore = defineStore("wizard", () => {
     reset,
   }
 })
+
+// Recarga en caliente (Vite): reemplaza el store en memoria cuando cambia este archivo, sin recargar la página.
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useWizardStore, import.meta.hot))

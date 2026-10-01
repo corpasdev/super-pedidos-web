@@ -7,6 +7,7 @@ import {
   SalesReportEmptyError,
   SalesReportMissingColumnsError,
   repairMojibake,
+  type DailySale,
 } from "@agente-pedidos/order-agent"
 import readXlsxFile from "read-excel-file/node"
 
@@ -27,6 +28,8 @@ interface RawSaleRow {
   barcode: string
   unitsSold: number
   soldAt: Date | null
+  /** Día de la venta (YYYY-MM-DD) tal como viene en el Excel. */
+  soldOn: string | null
   productName: string
   category: string
   purchaseCost: number | null
@@ -81,6 +84,43 @@ export const parseSalesDate = (value: unknown): Date | null => {
   return null
 }
 
+const pad = (value: number): string => String(value).padStart(2, "0")
+
+/** Día de la venta como YYYY-MM-DD, sin pasar por zonas horarias cuando la fecha viene como texto. */
+export const parseSaleDay = (value: unknown): string | null => {
+  if (value === null || value === undefined) return null
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : `${value.getUTCFullYear()}-${pad(value.getUTCMonth() + 1)}-${pad(value.getUTCDate())}`
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const date = new Date((value - EXCEL_EPOCH_OFFSET_DAYS) * MILLISECONDS_IN_DAY)
+    return `${date.getUTCFullYear()}-${pad(date.getUTCMonth() + 1)}-${pad(date.getUTCDate())}`
+  }
+  const asText = String(value).trim()
+  const isoMatch = asText.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`
+  const dayFirstMatch = asText.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/)
+  if (dayFirstMatch) return `${dayFirstMatch[3]}-${pad(Number(dayFirstMatch[2]))}-${pad(Number(dayFirstMatch[1]))}`
+  return null
+}
+
+/** Ventas agrupadas por código y día (para CM: lo vendido desde la última entrega de cada producto). */
+const groupByBarcodeAndDay = (rows: readonly RawSaleRow[]): DailySale[] => [
+  ...rows
+    .filter((row) => row.soldOn !== null)
+    .reduce((totals, row) => {
+      const key = `${row.barcode}|${row.soldOn}`
+      const current = totals.get(key)
+      return totals.set(key, { barcode: row.barcode, soldOn: row.soldOn!, units: (current?.units ?? 0) + row.unitsSold })
+    }, new Map<string, DailySale>())
+    .values(),
+]
+
+export interface ParsedSalesReport {
+  report: SalesReport
+  dailySales: DailySale[]
+}
+
 const parseInteger = (value: unknown): number | null => {
   if (value === null || value === undefined) return null
   if (typeof value === "number") return Number.isFinite(value) ? Math.round(value) : null
@@ -133,6 +173,11 @@ const pickPriceFromRecentRow = (rows: RawSaleRow[]): { purchaseCost: number | nu
  */
 export class SalesExcelParser {
   async parse(fileBuffer: Buffer, reportId: string, fileName: string): Promise<SalesReport> {
+    return (await this.parseWithDailySales(fileBuffer, reportId, fileName)).report
+  }
+
+  /** El reporte (sumado por código) y las ventas por día, que se guardan aparte para calcular CM. */
+  async parseWithDailySales(fileBuffer: Buffer, reportId: string, fileName: string): Promise<ParsedSalesReport> {
     const sheets = await readXlsxFile(fileBuffer)
     const sheet = sheets.find((candidate) => candidate.data.length > 1) ?? sheets[0]
     if (!sheet || !sheet.data || sheet.data.length < 2) throw new SalesReportEmptyError()
@@ -164,6 +209,7 @@ export class SalesExcelParser {
         barcode: String(barcodeRaw).trim().replace(/\s+/g, ""),
         unitsSold,
         soldAt: parseSalesDate(readCell("soldAt")),
+        soldOn: parseSaleDay(readCell("soldAt")),
         productName: repairMojibake(String(readCell("productName") ?? "").trim()),
         category: repairMojibake(String(readCell("category") ?? "").trim()),
         purchaseCost: parseInteger(readCell("purchaseCost")),
@@ -199,6 +245,6 @@ export class SalesExcelParser {
 
     const today = new Date()
     const period = new DateRange(earliest ?? today, latest ?? today)
-    return new SalesReport(reportId, fileName, period, [...lines], null)
+    return { report: new SalesReport(reportId, fileName, period, [...lines], null), dailySales: groupByBarcodeAndDay(rawRows) }
   }
 }

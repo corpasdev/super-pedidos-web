@@ -1,5 +1,5 @@
 import { ref } from "vue"
-import { defineStore } from "pinia"
+import { acceptHMRUpdate, defineStore } from "pinia"
 import { apiClient } from "../infrastructure/apiClient"
 import type {
   OrderDetailItem,
@@ -90,3 +90,6 @@ export const useHistoryStore = defineStore("history", () => {
     updatePayment,
   }
 })
+
+// Recarga en caliente (Vite): reemplaza el store en memoria cuando cambia este archivo, sin recargar la página.
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useHistoryStore, import.meta.hot))

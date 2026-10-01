@@ -22,6 +22,8 @@ export class Supplier {
     readonly taxId: string | null,
     readonly contactEmail: string | null,
     private settings: SupplierSettings,
+    /** WhatsApp o teléfono para enviarle el pedido. */
+    readonly whatsappNumber: string | null = null,
   ) {}
 
   get schedule(): SupplierSchedule | null {

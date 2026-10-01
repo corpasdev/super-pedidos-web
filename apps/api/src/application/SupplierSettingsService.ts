@@ -14,6 +14,7 @@ export interface UpdateSupplierInput {
   name?: string
   taxId?: string | null
   contactEmail?: string | null
+  whatsappNumber?: string | null
   schedule?: SupplierScheduleInput | null
   minimumOrderAmount?: number | null
   /** Tope por pedido; null = sin tope. */
@@ -42,11 +43,12 @@ export class SupplierSettingsService {
       isEstimated: changes.settingsAreEstimated,
     })
     await this.supplierRepository.save(storeId, supplier)
-    if (changes.name !== undefined || changes.taxId !== undefined || changes.contactEmail !== undefined) {
+    if (changes.name !== undefined || changes.taxId !== undefined || changes.contactEmail !== undefined || changes.whatsappNumber !== undefined) {
       await this.supplierRepository.saveIdentity(storeId, supplier.id, {
         name: changes.name ?? supplier.name,
         taxId: changes.taxId === undefined ? supplier.taxId : changes.taxId,
         contactEmail: changes.contactEmail === undefined ? supplier.contactEmail : changes.contactEmail,
+        whatsappNumber: changes.whatsappNumber === undefined ? supplier.whatsappNumber : changes.whatsappNumber,
       })
     }
     return supplier

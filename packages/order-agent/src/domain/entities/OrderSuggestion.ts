@@ -6,6 +6,7 @@ import type { Supplier } from "./Supplier.js"
 import type { OrderLine } from "./OrderLine.js"
 import type { OrderStatus } from "../enums.js"
 import type { ReplenishmentMode } from "../enums.js"
+import type { BudgetTier } from "../../suggestion/types.js"
 import { Money } from "../value-objects/Money.js"
 
 export interface OrderLineGroup {
@@ -24,6 +25,8 @@ export class OrderSuggestion {
     readonly replenishmentMode: ReplenishmentMode,
     readonly salesReportId: string | null,
     lines: readonly OrderLine[],
+    /** Modo de niveles: qué permitió la plata (tope, entre base y tope, bajo la base…). */
+    readonly budgetTier: BudgetTier | null = null,
   ) {
     this.orderLines = [...lines]
   }
@@ -81,6 +84,7 @@ export class OrderSuggestion {
       this.replenishmentMode,
       this.salesReportId,
       nextLines,
+      this.budgetTier,
     )
   }
 
@@ -98,6 +102,7 @@ export class OrderSuggestion {
       this.replenishmentMode,
       this.salesReportId,
       nextLines,
+      this.budgetTier,
     )
   }
 
@@ -108,6 +113,7 @@ export class OrderSuggestion {
       this.replenishmentMode,
       this.salesReportId,
       this.orderLines.map((line) => line.resetAdjustment()),
+      this.budgetTier,
     )
   }
 

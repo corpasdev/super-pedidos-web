@@ -27,3 +27,12 @@ Thumbs.db
 
 # vite
 apps/web/*.local
+# herramientas locales (rutas de esta máquina) y grafo generado por graphify
+.claude/
+graphify-out/
+
+# ventas reales de la tienda: no se suben (data/mock sí)
+data/ventas-*.xlsx
+
+# ids de los vencidos de prueba (dependen de la base de cada quien)
+data/mock/.vencidos-prueba.json

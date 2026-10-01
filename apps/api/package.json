@@ -9,7 +9,10 @@
     "start": "node dist/server.js",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "mock:ventas": "tsx src/scripts/ventasMock.ts",
+    "mock:deudas": "tsx src/scripts/deudasMock.ts",
+    "mock:vencidos": "tsx src/scripts/vencidosMock.ts"
   },
   "dependencies": {
     "@agente-pedidos/database-types": "0.1.0",

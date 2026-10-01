@@ -6,7 +6,11 @@ import { purchaseOrderFromRows } from "../mappers.js"
 export class SupabasePurchaseOrderRepository implements PurchaseOrderRepository {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
-  async save(storeId: string, order: PurchaseOrder): Promise<void> {
+  async save(
+    storeId: string,
+    order: PurchaseOrder,
+    delivery: { sellerId: string | null; expectedDeliveryDay: string | null } = { sellerId: null, expectedDeliveryDay: null },
+  ): Promise<void> {
     const { error: orderError } = await this.supabase.from("purchase_orders").insert({
       id: order.id,
       store_id: storeId,
@@ -15,6 +19,8 @@ export class SupabasePurchaseOrderRepository implements PurchaseOrderRepository 
       available_budget: order.budget?.availableBudget?.pesos ?? null,
       maximum_order_cost: order.budget?.maximumOrderCost.pesos ?? Math.round(order.totalCost.pesos * 1.5),
       total_cost: order.totalCost.pesos,
+      seller_id: delivery.sellerId,
+      expected_delivery_date: delivery.expectedDeliveryDay,
     })
     if (orderError) throw orderError
 
@@ -27,6 +33,13 @@ export class SupabasePurchaseOrderRepository implements PurchaseOrderRepository 
           units: line.units,
           unit_cost: line.unitCost.pesos,
           was_adjusted_by_owner: false,
+          // Copia de los niveles y la posición del producto al momento de pedir.
+          min_stock_units: line.stockPosition?.levels.base ?? null,
+          reorder_point_units: line.stockPosition?.levels.reorderPoint ?? null,
+          max_stock_units: line.stockPosition?.levels.tope ?? null,
+          moved_units: line.stockPosition?.movedUnits ?? null,
+          estimated_stock: line.stockPosition?.estimatedStock ?? null,
+          units_above_base: line.stockPosition?.unitsAboveBase ?? null,
         })),
       )
       if (linesError) throw linesError

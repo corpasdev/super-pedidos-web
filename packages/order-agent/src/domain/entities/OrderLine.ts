@@ -1,9 +1,24 @@
 import { calculateCoverageRatio } from "../../formulas/budgetAllocation.js"
 import type { Product } from "./Product.js"
 import type { Money } from "../value-objects/Money.js"
+import type { LevelReached, StockLevels, StockStatus } from "../../suggestion/types.js"
 
 /** De dónde sale el costo de la línea: escrito para este pedido, o el del producto (dueño, Excel o estimado). */
 export type OrderLineCostSource = "order" | "owner" | "sales_report" | "estimated"
+
+/** Posición del producto en el modelo de niveles al momento de sugerir (se guarda como copia en el pedido). */
+export interface StockPositionSnapshot {
+  readonly levels: StockLevels
+  /** CM. */
+  readonly movedUnits: number
+  /** EA con signo. */
+  readonly unitsAboveBase: number | null
+  readonly estimatedStock: number | null
+  readonly status: StockStatus
+  readonly unitsToBase: number
+  readonly unitsToTope: number
+  readonly reached: LevelReached
+}
 
 /** Línea del pedido sugerido. Las cantidades siempre son múltiplos de empaque (R5). */
 export class OrderLine {
@@ -19,6 +34,8 @@ export class OrderLine {
     private ownerAdjustedUnits: number | null,
     /** Precio que dio el vendedor para ESTE pedido (el costo del proveedor varía; no se guarda en el producto). */
     readonly unitCostOverride: Money | null = null,
+    /** Solo en el modo de niveles (B < PD < T): CM, EA, existencia estimada y hasta dónde llegó la plata. */
+    readonly stockPosition: StockPositionSnapshot | null = null,
   ) {}
 
   /** Costo unitario efectivo: el de este pedido si el dueño lo escribió; si no, el del producto (R8). */
@@ -95,6 +112,7 @@ export class OrderLine {
       this.allocatedUnits,
       units,
       this.unitCostOverride,
+      this.stockPosition,
     )
   }
 }

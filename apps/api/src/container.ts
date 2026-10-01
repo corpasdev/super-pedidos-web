@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
-import { DataQualityInspector, OrderSuggestionCalculator } from "@agente-pedidos/order-agent"
+import { DataQualityInspector } from "@agente-pedidos/order-agent"
 import type { Database } from "@agente-pedidos/database-types"
 import { SupabaseStoreRepository } from "./infrastructure/supabase/repositories/SupabaseStoreRepository.js"
 import { SupabaseSupplierRepository } from "./infrastructure/supabase/repositories/SupabaseSupplierRepository.js"
@@ -18,12 +18,18 @@ import { PurchaseOrderService } from "./application/PurchaseOrderService.js"
 import { TruckDeliveryService } from "./application/TruckDeliveryService.js"
 import { SupplierSettingsService } from "./application/SupplierSettingsService.js"
 import { ProductSettingsService } from "./application/ProductSettingsService.js"
+import { CatalogEntryService } from "./application/CatalogEntryService.js"
+import { ExpiredExchangeService } from "./application/ExpiredExchangeService.js"
+import { SupabaseExpiredExchangeRepository } from "./infrastructure/supabase/repositories/SupabaseExpiredExchangeRepository.js"
 import { StoreSettingsService } from "./application/StoreSettingsService.js"
 import { DailyCashService } from "./application/DailyCashService.js"
 import { StoreProfileService } from "./application/StoreProfileService.js"
 import { OrderPaymentService } from "./application/OrderPaymentService.js"
+import { InboxService } from "./application/InboxService.js"
+import { SupabaseSellerRepository } from "./infrastructure/supabase/repositories/SupabaseSellerRepository.js"
 import { SupabaseStoreProfileRepository } from "./infrastructure/supabase/repositories/SupabaseStoreProfileRepository.js"
 import { SupabaseDailyCashRepository } from "./infrastructure/supabase/repositories/SupabaseDailyCashRepository.js"
+import { SupabaseSalesDailyRepository } from "./infrastructure/supabase/repositories/SupabaseSalesDailyRepository.js"
 
 export interface ContainerOptions {
   supabaseUrl: string
@@ -47,9 +53,13 @@ export class Container {
   readonly salesReportImportService: SalesReportImportService
   readonly supplierSettingsService: SupplierSettingsService
   readonly productSettingsService: ProductSettingsService
+  readonly catalogEntryService: CatalogEntryService
+  readonly expiredExchangeService: ExpiredExchangeService
   readonly dailyCashService: DailyCashService
   readonly storeProfileService: StoreProfileService
   readonly orderPaymentService: OrderPaymentService
+  readonly sellerRepository: SupabaseSellerRepository
+  readonly inboxService: InboxService
   readonly orderSuggestionService: OrderSuggestionService
   readonly purchaseOrderService: PurchaseOrderService
   readonly truckDeliveryService: TruckDeliveryService
@@ -69,7 +79,7 @@ export class Container {
     const softwareCatalogParser = new SoftwareCatalogParser()
     const salesExcelParser = new SalesExcelParser()
     const dataQualityInspector = new DataQualityInspector()
-    const orderSuggestionCalculator = new OrderSuggestionCalculator()
+    const salesDailyRepository = new SupabaseSalesDailyRepository(this.supabase)
 
     this.storeSettingsService = new StoreSettingsService(this.storeRepository)
     this.catalogImportService = new CatalogImportService(softwareCatalogParser, this.catalogImportRepository, dataQualityInspector)
@@ -79,21 +89,26 @@ export class Container {
       this.productRepository,
       this.brandRepository,
       dataQualityInspector,
+      salesDailyRepository,
     )
     this.supplierSettingsService = new SupplierSettingsService(this.supplierRepository)
     this.productSettingsService = new ProductSettingsService(this.productRepository, this.brandRepository)
+    this.catalogEntryService = new CatalogEntryService(this.supplierRepository, this.productRepository)
+    this.expiredExchangeService = new ExpiredExchangeService(new SupabaseExpiredExchangeRepository(this.supabase))
     this.dailyCashService = new DailyCashService(new SupabaseDailyCashRepository(this.supabase))
     this.storeProfileService = new StoreProfileService(new SupabaseStoreProfileRepository(this.supabase))
     this.orderPaymentService = new OrderPaymentService(this.supabase)
+    this.sellerRepository = new SupabaseSellerRepository(this.supabase)
     this.orderSuggestionService = new OrderSuggestionService(
       this.supplierRepository,
       this.productRepository,
       this.salesReportRepository,
       this.brandRepository,
-      orderSuggestionCalculator,
       this.dailyCashService,
+      salesDailyRepository,
     )
     this.purchaseOrderService = new PurchaseOrderService(this.purchaseOrderRepository)
+    this.inboxService = new InboxService(this.supabase, this.sellerRepository, this.dailyCashService, this.orderSuggestionService)
     this.truckDeliveryService = new TruckDeliveryService(this.purchaseOrderRepository, this.inventoryMovementRepository)
   }
 }

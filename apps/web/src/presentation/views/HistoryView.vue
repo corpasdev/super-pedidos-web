@@ -5,9 +5,20 @@ import { useHistoryStore } from "../../stores/historyStore"
 import { es } from "../../i18n/es"
 import { formatDate, formatMoney, moneyFormatter, moneyParser } from "../../i18n/format"
 import type { OrderListItem, OrderPaymentChange } from "../../infrastructure/apiTypes"
-import { tablePagination, totalLabel } from "../tables"
+import { tablePagination, totalCount, totalLabel } from "../tables"
+import { toolbarControlOverrides, toolbarTagOverrides } from "../../theme/naiveOverrides"
+import { SearchOutline } from "@vicons/ionicons5"
+import { moneyInputProps } from "../numericInput"
 
 const history = useHistoryStore()
+
+const search = ref("")
+/** Pedidos que coinciden con la búsqueda (por proveedor). */
+const filteredOrders = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  if (term === "") return history.orders
+  return history.orders.filter((order) => (order.supplierName ?? "").toLowerCase().includes(term))
+})
 const message = useMessage()
 
 /** Lo que el dueño va escribiendo en "Pendiente por pagar"; se guarda al salir del campo o con Enter. */
@@ -44,8 +55,9 @@ onMounted(async () => {
 const statusLabel = (status: string): string =>
   (es.orderStatus as unknown as Record<string, string>)[status] ?? status
 
-const statusSeverity = (status: string): "info" | "success" | "default" =>
-  status === "received" ? "success" : status === "confirmed" ? "info" : "default"
+/** Realizado (ya se entregó) en verde; pendiente (se espera la entrega) en amarillo. */
+const statusSeverity = (status: string): "warning" | "success" | "default" =>
+  status === "received" ? "success" : status === "confirmed" ? "warning" : "default"
 
 interface DetailLine {
   productId: string
@@ -134,11 +146,11 @@ const orderColumns: DataTableColumns<OrderListItem> = [
           precision: 0,
           showButton: false,
           size: "small",
-          formatter: moneyFormatter,
-          parser: moneyParser,
+          format: moneyFormatter,
+          parse: moneyParser,
           status: order.pendingAmount > 0 ? "warning" : undefined,
           disabled: history.savingPayment.has(order.id),
-          inputProps: { "aria-label": es.history.pendingInput(order.supplierName ?? "") },
+          inputProps: moneyInputProps({ "aria-label": es.history.pendingInput(order.supplierName ?? "") }),
           "onUpdate:value": (value: number | null) => {
             pendingDrafts.value = { ...pendingDrafts.value, [order.id]: value }
           },
@@ -178,41 +190,62 @@ const orderRowProps = (order: OrderListItem) => ({
 </script>
 
 <template>
-  <n-flex vertical :size="20">
-    <n-flex vertical :size="2">
-      <n-text :style="{ fontSize: '20px', fontWeight: 500 }">{{ es.history.title }}</n-text>
-      <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.history.subtitle }}</n-text>
-    </n-flex>
+  <n-flex vertical :size="16">
+    <n-text :style="{ fontSize: '20px', fontWeight: 500 }">{{ es.history.title }}</n-text>
 
     <n-alert v-if="history.error !== null" type="error" :bordered="false">{{ history.error }}</n-alert>
 
-    <n-card :bordered="false">
-      <template #header>
-        <n-text :style="{ fontSize: '16px', fontWeight: 500 }">{{ es.history.title }}</n-text>
-      </template>
-      <template #header-extra>
-        <n-flex align="center" :size="8">
-          <n-tag round :bordered="false" :type="totalPending > 0 ? 'warning' : 'success'">
-            {{ totalPending > 0 ? es.history.pendingTotal(formatMoney(totalPending)) : es.history.allSettled }}
-          </n-tag>
-          <n-tag round :bordered="false">{{ totalLabel(history.orders.length, "order") }}</n-tag>
-        </n-flex>
-      </template>
-      <n-data-table
-        :columns="orderColumns"
-        :scroll-x="900"
-        :data="history.orders"
-        :loading="history.ordersLoading"
-        :pagination="ordersPagination"
-        :row-key="(order: OrderListItem) => order.id"
-        :row-props="orderRowProps"
-        :bordered="false"
+    <!-- Buscador y totales fuera de la tabla, como en Proveedores y Productos -->
+    <n-flex align="center" justify="space-between" :size="12">
+      <n-input
+        v-model:value="search"
+        :placeholder="es.suppliersView.search"
+        clearable
+        size="large"
+        :theme-overrides="toolbarControlOverrides"
+        :style="{ width: '440px', maxWidth: '100%' }"
       >
-        <template #empty>
-          <n-empty :description="es.history.empty" />
-        </template>
-      </n-data-table>
-    </n-card>
+        <template #prefix><n-icon :component="SearchOutline" /></template>
+      </n-input>
+      <n-flex align="center" :size="12">
+        <n-tag
+          round
+          size="large"
+          :bordered="false"
+          :theme-overrides="toolbarTagOverrides"
+          :type="totalPending > 0 ? 'warning' : 'success'"
+          class="tabular-nums"
+        >
+          {{ totalPending > 0 ? es.history.pendingTotal(formatMoney(totalPending)) : es.history.allSettled }}
+        </n-tag>
+        <n-tag
+          round
+          size="large"
+          :bordered="false"
+          :theme-overrides="toolbarTagOverrides"
+          class="tabular-nums"
+          :aria-label="totalLabel(filteredOrders.length, 'order')"
+          :title="totalLabel(filteredOrders.length, 'order')"
+        >
+          {{ totalCount(filteredOrders.length) }}
+        </n-tag>
+      </n-flex>
+    </n-flex>
+
+    <n-data-table
+      :columns="orderColumns"
+      :scroll-x="900"
+      :data="filteredOrders"
+      :loading="history.ordersLoading"
+      :pagination="ordersPagination"
+      :row-key="(order: OrderListItem) => order.id"
+      :row-props="orderRowProps"
+      :bordered="true"
+    >
+      <template #empty>
+        <n-empty :description="es.history.empty" />
+      </template>
+    </n-data-table>
 
     <n-modal
       :show="history.detail !== null"
@@ -238,6 +271,7 @@ const orderRowProps = (order: OrderListItem) => ({
           :pagination="detailPagination"
           :row-key="(line: DetailLine) => line.productId"
           :scroll-x="480"
+          :bordered="true"
           size="small"
         />
 

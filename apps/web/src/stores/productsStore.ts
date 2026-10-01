@@ -1,5 +1,5 @@
 import { computed, ref } from "vue"
-import { defineStore } from "pinia"
+import { acceptHMRUpdate, defineStore } from "pinia"
 import { apiClient } from "../infrastructure/apiClient"
 import type { ProductItem, ProductSettingsPatch, SupplierListItem } from "../infrastructure/apiTypes"
 
@@ -46,14 +46,32 @@ export const useProductsStore = defineStore("products", () => {
     }
   }
 
-  async function saveSettings(productId: string, patch: ProductSettingsPatch): Promise<void> {
-    rowState.value = { ...rowState.value, [productId]: "saving" }
-    try {
+  /** Guarda un ajuste del producto. Devuelve el motivo si la API lo rechaza (p. ej. niveles fuera de orden). */
+  async function saveSettings(productId: string, patch: ProductSettingsPatch): Promise<string | null> {
+    return trackSave(productId, async () => {
       const response = await apiClient.patch<{ product: ProductItem }>(`/products/${productId}/settings`, patch)
       products.value = products.value.map((p) => (p.id === productId ? response.product : p))
+    })
+  }
+
+  /** Unidades actuales escritas en la tabla (conteo real). */
+  async function saveStock(productId: string, units: number): Promise<string | null> {
+    return trackSave(productId, async () => {
+      await apiClient.patch<{ ok: true }>(`/products/${productId}/stock`, { units })
+      products.value = products.value.map((p) => (p.id === productId ? { ...p, stockUnits: units } : p))
+    })
+  }
+
+  /** Marca la fila como guardando / guardada / con error mientras se guarda. */
+  async function trackSave(productId: string, save: () => Promise<void>): Promise<string | null> {
+    rowState.value = { ...rowState.value, [productId]: "saving" }
+    try {
+      await save()
       rowState.value = { ...rowState.value, [productId]: "saved" }
-    } catch {
+      return null
+    } catch (err) {
       rowState.value = { ...rowState.value, [productId]: "failed" }
+      return err instanceof Error ? err.message : "No se guardó."
     } finally {
       setTimeout(() => {
         if (rowState.value[productId] !== "saving") {
@@ -82,6 +100,10 @@ export const useProductsStore = defineStore("products", () => {
     loadSuppliers,
     selectSupplier,
     saveSettings,
+    saveStock,
     countStock,
   }
 })
+
+// Recarga en caliente (Vite): reemplaza el store en memoria cuando cambia este archivo, sin recargar la página.
+if (import.meta.hot) import.meta.hot.accept(acceptHMRUpdate(useProductsStore, import.meta.hot))

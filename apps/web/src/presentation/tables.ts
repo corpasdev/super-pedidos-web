@@ -20,6 +20,9 @@ export const tablePagination = (): PaginationProps => ({
 })
 
 /** "23 proveedores", "1 pedido"… para la etiqueta de total de la cabecera. */
+/** Solo la cifra (3.752); el texto completo queda para lectores de pantalla con totalLabel. */
+export const totalCount = (count: number): string => count.toLocaleString("es-CO")
+
 export const totalLabel = (count: number, noun: keyof typeof es.table.nouns | string): string => {
   const [singular, plural] = es.table.nouns[noun] ?? [noun, noun]
   return es.table.count(count, singular, plural)

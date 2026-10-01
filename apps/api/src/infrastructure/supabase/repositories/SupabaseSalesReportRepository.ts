@@ -16,13 +16,39 @@ const salesReportProjectionFromRow = (
 export class SupabaseSalesReportRepository implements SalesReportRepository {
   constructor(private readonly supabase: SupabaseClient<Database>) {}
 
-  async listAll(storeId: string): Promise<Array<Pick<SalesReport, "fileName" | "period">>> {
+  async listAll(storeId: string): Promise<Array<Pick<SalesReport, "id" | "fileName" | "period">>> {
     const { data: reportRows, error } = await this.supabase
       .from("sales_reports")
-      .select("file_name, period_starts_at, period_ends_at")
+      .select("id, file_name, period_starts_at, period_ends_at")
       .eq("store_id", storeId)
     if (error) throw error
-    return (reportRows ?? []).map((row) => salesReportProjectionFromRow(row.file_name, row.period_starts_at, row.period_ends_at))
+    return (reportRows ?? []).map((row) => ({
+      id: row.id,
+      ...salesReportProjectionFromRow(row.file_name, row.period_starts_at, row.period_ends_at),
+    }))
+  }
+
+  async exists(storeId: string, reportId: string): Promise<boolean> {
+    const { data, error } = await this.supabase.from("sales_reports").select("id").eq("store_id", storeId).eq("id", reportId).maybeSingle()
+    if (error) throw error
+    return data !== null
+  }
+
+  /**
+   * Quita un Excel de ventas: sus ventas por día (solo los días que todavía son de este archivo;
+   * si otro Excel ya los reemplazó, se quedan), sus líneas (en cascada) y la referencia desde pedidos.
+   */
+  async delete(storeId: string, reportId: string): Promise<void> {
+    const { error: dailyError } = await this.supabase.from("sales_daily").delete().eq("store_id", storeId).eq("sales_report_id", reportId)
+    if (dailyError) throw dailyError
+    const { error: ordersError } = await this.supabase
+      .from("purchase_orders")
+      .update({ sales_report_id: null })
+      .eq("store_id", storeId)
+      .eq("sales_report_id", reportId)
+    if (ordersError) throw ordersError
+    const { error } = await this.supabase.from("sales_reports").delete().eq("store_id", storeId).eq("id", reportId)
+    if (error) throw error
   }
 
   async replaceUnmatchedSales(storeId: string, issues: DataQualityIssue[]): Promise<void> {

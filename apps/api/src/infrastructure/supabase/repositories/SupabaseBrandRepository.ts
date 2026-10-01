@@ -10,17 +10,21 @@ export class SupabaseBrandRepository implements BrandRepository {
   async listNamesByProductIds(storeId: string, productIds: string[]): Promise<Map<string, string>> {
     if (productIds.length === 0) return new Map()
     const namesById = new Map<string, string>()
-    const { data: productRows, error: productError } = await this.supabase
-      .from("products")
-      .select("id, brand_id")
-      .eq("store_id", storeId)
-      .in("id", productIds)
-      .not("brand_id", "is", null)
-    if (productError) throw productError
+    // En bloques de 100 ids: un proveedor grande (700+ productos) no cabe en la URL de un solo `.in()`.
+    const productRows: { id: string; brand_id: string | null }[] = []
+    for (let start = 0; start < productIds.length; start += 100) {
+      const { data, error: productError } = await this.supabase
+        .from("products")
+        .select("id, brand_id")
+        .eq("store_id", storeId)
+        .in("id", productIds.slice(start, start + 100))
+        .not("brand_id", "is", null)
+      if (productError) throw productError
+      productRows.push(...(data ?? []))
+    }
 
-    const brandIds = [
-      ...new Set((productRows ?? []).map((row) => row.brand_id).filter((id): id is string => id !== null)),
-    ]
+    const brandIds = [...new Set(productRows.map((row) => row.brand_id).filter((id): id is string => id !== null))]
+    if (brandIds.length === 0) return namesById
     const { data: brandRows, error: brandError } = await this.supabase
       .from("brands")
       .select("*")
@@ -28,7 +32,7 @@ export class SupabaseBrandRepository implements BrandRepository {
     if (brandError) throw brandError
 
     const nameById = new Map((brandRows ?? []).map((row) => [row.id, row.name]))
-    for (const productRow of productRows ?? []) {
+    for (const productRow of productRows) {
       const brandName = productRow.brand_id === null ? null : (nameById.get(productRow.brand_id) ?? null)
       if (brandName !== null) namesById.set(productRow.id, brandName)
     }

@@ -6,7 +6,12 @@ import type { SupabasePurchaseOrderRepository } from "../infrastructure/supabase
 export class PurchaseOrderService {
   constructor(private readonly purchaseOrderRepository: SupabasePurchaseOrderRepository) {}
 
-  async confirm(storeId: string, suggestion: OrderSuggestion): Promise<PurchaseOrder> {
+  /** `delivery`: qué vendedor tomó el pedido y qué día llega (el mismo día si entrega en el acto). */
+  async confirm(
+    storeId: string,
+    suggestion: OrderSuggestion,
+    delivery: { sellerId: string | null; expectedDeliveryDay: string | null } = { sellerId: null, expectedDeliveryDay: null },
+  ): Promise<PurchaseOrder> {
     const pending = await this.purchaseOrderRepository.findPendingBySupplier(storeId, suggestion.supplier.id)
     if (pending) throw new PurchaseOrderConflictError(suggestion.supplier.name)
 
@@ -17,7 +22,12 @@ export class PurchaseOrderService {
       suggestion.lines
         .filter((line) => line.finalUnits > 0)
         // El costo guardado es el de ESTE pedido (el que dio el vendedor, o el del producto si no se escribió).
-        .map((line) => ({ productId: line.product.id, units: line.finalUnits, unitCost: line.unitCost })),
+        .map((line) => ({
+          productId: line.product.id,
+          units: line.finalUnits,
+          unitCost: line.unitCost,
+          stockPosition: line.stockPosition,
+        })),
       "confirmed",
       {
         availableBudget:
@@ -27,7 +37,7 @@ export class PurchaseOrderService {
         maximumOrderCost: suggestion.maximumOrderCost,
       },
     )
-    await this.purchaseOrderRepository.save(storeId, order)
+    await this.purchaseOrderRepository.save(storeId, order, delivery)
     return order
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { OrderSuggestionCalculator } from "../src/domain/services/OrderSuggestionCalculator.js"
+import { runOrderAgent } from "../src/agent/OrderAgent.js"
 import { BrandDetector, OTHER_BRANDS_BRAND_NAME } from "../src/domain/services/BrandDetector.js"
 import { DataQualityInspector } from "../src/domain/services/DataQualityInspector.js"
 import type { RawImportedProduct } from "../src/domain/services/DataQualityInspector.js"
@@ -378,6 +379,72 @@ describe("Costo del pedido: estimado por categoría y precio del vendedor", () =
     expect(quoted.lines[0]!.isCostEstimated).toBe(false)
     expect(quoted.lines[0]!.finalUnits).toBe(8) // $12.000 ÷ $1.500
     expect(quoted.estimatedCostLineCount).toBe(0)
+  })
+})
+
+describe("runOrderAgent · modo de niveles (B < PD < T)", () => {
+  const leveled = (id: string, barcode: string) =>
+    new Product(
+      id,
+      Barcode.parse(barcode),
+      `Producto ${id}`,
+      "abarrotes",
+      Money.fromPesos(1_200),
+      "supplier-1",
+      null,
+      new ProductSettings(12, Money.fromPesos(1_000), CostSource.SalesReport, PackSize.of(1), false, 4, 8),
+      new StockLevel(0, false),
+    )
+  const run = (budgetPesos: number) =>
+    runOrderAgent({
+      supplier: weeklySupplier(),
+      products: [leveled("a", "7700000000201"), leveled("b", "7700000000202")],
+      brandNamesByProductId: new Map(),
+      salesReport: null,
+      availableBudget: Money.fromPesos(budgetPesos),
+      replenishmentMode: ReplenishmentMode.Levels,
+      today: new Date(2026, 8, 24),
+      movedUnitsByBarcode: new Map([["7700000000201", 6], ["7700000000202", 3]]),
+      budgetPesos,
+    })
+
+  it("recorre las etapas y marca los productos bajo la base", () => {
+    const result = run(1_000_000)
+    expect(result.stages).toEqual(["situation", "observe", "evaluate", "decide", "act", "learn"])
+    expect(result.decision.budgetTier).toBe("tope")
+    expect(result.decision.belowBaseCount).toBe(1) // A: EA = 8 − (4 + 6) = −2
+    const lineA = result.suggestion.lines.find((line) => line.product.id === "a")!
+    expect(lineA.stockPosition?.unitsAboveBase).toBe(-2)
+    expect(lineA.finalUnits).toBe(10) // tope 12 − existencia 2
+  })
+
+  it("sin ventas después de su última entrega, CM = 0 y el producto no entra (no se usa el Excel completo)", () => {
+    const report = new SalesReport(
+      "r",
+      "ventas.xlsx",
+      new DateRange(new Date(2026, 8, 16), new Date(2026, 8, 16)),
+      [new SalesReportLine(Barcode.parse("7700000000201"), "A", "abarrotes", 9, 1, null, null)],
+      null,
+    )
+    const result = runOrderAgent({
+      supplier: weeklySupplier(),
+      products: [leveled("a", "7700000000201")],
+      brandNamesByProductId: new Map(),
+      salesReport: report,
+      availableBudget: Money.fromPesos(100_000),
+      replenishmentMode: ReplenishmentMode.Levels,
+      today: new Date(2026, 8, 24),
+      movedUnitsByBarcode: new Map(), // se calculó: nada vendido después de la entrega
+      budgetPesos: 100_000,
+    })
+    expect(result.suggestion.lines).toHaveLength(0)
+    expect(result.decision.budgetTier).toBe("nothing_to_order")
+  })
+
+  it("con poca plata solo cubre la base", () => {
+    const result = run(2_000)
+    expect(result.suggestion.lines.find((line) => line.product.id === "a")!.finalUnits).toBe(2)
+    expect(result.decision.budgetTier).toBe("between_base_and_tope")
   })
 })
 

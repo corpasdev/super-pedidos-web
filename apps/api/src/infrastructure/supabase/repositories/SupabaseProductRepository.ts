@@ -5,6 +5,19 @@ import { productFromRows } from "../mappers.js"
 
 type SettingsRow = Database["public"]["Tables"]["product_settings"]["Row"]
 
+export interface NewProductRow {
+  barcode: string
+  name: string
+  category: string
+  supplierId: string | null
+  salePrice: number
+  unitCost: number | null
+  stockUnits: number
+  minStockUnits: number | null
+  reorderPointUnits: number | null
+  maxStockUnits: number | null
+}
+
 export interface ProductWithNames {
   product: Product
   brandName: string | null
@@ -61,12 +74,18 @@ export class SupabaseProductRepository implements ProductRepository {
 
   async findByBarcodes(storeId: string, barcodes: Barcode[]): Promise<Product[]> {
     if (barcodes.length === 0) return []
-    const { data: productRows, error } = await this.supabase
-      .from("products")
-      .select("*")
-      .eq("store_id", storeId)
-      .in("barcode", barcodes.map((barcode) => barcode.value))
-    if (error) throw error
+    // En bloques: un Excel de una semana trae ~650 códigos y la URL de `.in()` no puede ser tan larga.
+    const values = barcodes.map((barcode) => barcode.value)
+    const productRows: Database["public"]["Tables"]["products"]["Row"][] = []
+    for (let start = 0; start < values.length; start += 150) {
+      const { data, error } = await this.supabase
+        .from("products")
+        .select("*")
+        .eq("store_id", storeId)
+        .in("barcode", values.slice(start, start + 150))
+      if (error) throw error
+      productRows.push(...(data ?? []))
+    }
 
     const settingsByProductId = await this.loadSettingsFor(storeId, (productRows ?? []).map((row) => row.id))
     return (productRows ?? []).map((row) => productFromRows(row, settingsByProductId.get(row.id) ?? null))
@@ -84,6 +103,49 @@ export class SupabaseProductRepository implements ProductRepository {
 
     const settingsRows = await this.loadSettingsFor(storeId, [productRow.id])
     return productFromRows(productRow, settingsRows.get(productRow.id) ?? null)
+  }
+
+  async existsByBarcode(storeId: string, barcode: string): Promise<boolean> {
+    const { data, error } = await this.supabase.from("products").select("id").eq("store_id", storeId).eq("barcode", barcode).limit(1)
+    if (error) throw error
+    return (data ?? []).length > 0
+  }
+
+  /** Producto nuevo registrado a mano, con su fila de ajustes (costo y niveles). */
+  async create(storeId: string, input: NewProductRow): Promise<string> {
+    const { data, error } = await this.supabase
+      .from("products")
+      .insert({
+        store_id: storeId,
+        supplier_id: input.supplierId,
+        barcode: input.barcode,
+        name: input.name,
+        category: input.category,
+        sale_price: input.salePrice,
+        stock_units: input.stockUnits,
+        is_stock_reliable: true,
+      })
+      .select("id")
+      .single()
+    if (error) throw error
+
+    const { error: settingsError } = await this.supabase.from("product_settings").insert({
+      product_id: data.id,
+      store_id: storeId,
+      // Sin precio de compra queda en 0 y el producto usa el estimado por categoría.
+      unit_cost: input.unitCost ?? 0,
+      cost_source: input.unitCost === null ? "estimated" : "owner",
+      is_estimated: input.unitCost === null,
+      pack_size: 1,
+      min_stock_units: input.minStockUnits,
+      reorder_point_units: input.reorderPointUnits,
+      max_stock_units: input.maxStockUnits,
+    })
+    if (settingsError) {
+      await this.supabase.from("products").delete().eq("store_id", storeId).eq("id", data.id)
+      throw settingsError
+    }
+    return data.id
   }
 
   async save(storeId: string, product: Product): Promise<void> {
@@ -111,6 +173,7 @@ export class SupabaseProductRepository implements ProductRepository {
       const { error: productError } = await this.supabase
         .from("products")
         .update({
+          sale_price: product.salePrice.pesos,
           stock_units: product.stockUnits,
           is_stock_reliable: product.isStockReliable,
           brand_id: product.brandIdentifier,
@@ -127,6 +190,8 @@ export class SupabaseProductRepository implements ProductRepository {
         cost_source: product.costSource,
         pack_size: product.packSize.units,
         max_stock_units: product.maxStockUnits,
+        min_stock_units: product.minStockUnits,
+        reorder_point_units: product.reorderPointUnits,
         is_estimated: product.isEstimated,
         updated_at: new Date().toISOString(),
       })

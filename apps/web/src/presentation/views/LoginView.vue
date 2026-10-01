@@ -16,7 +16,7 @@ const password = ref("")
 async function handleSubmit(): Promise<void> {
   try {
     await session.signIn(email.value, password.value)
-    const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "/inicio"
+    const redirect = typeof route.query.redirect === "string" ? route.query.redirect : "/pedido"
     await router.push(redirect)
   } catch {
     // session.signInError ya contiene el mensaje.
