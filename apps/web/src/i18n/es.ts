@@ -145,7 +145,7 @@ export const es = {
       base: "Base",
       reorderPoint: "PD",
       tope: "Tope",
-      reorderPointNote: "PD = punto de pedido: el nivel en que queda el producto después de cada entrega.",
+      reorderPointFull: "Punto de pedido",
       order: "Pedir",
       cost: "Precio compra",
       subtotal: "Subtotal",

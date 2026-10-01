@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { h, reactive } from "vue"
-import { NButton, NFlex, NIcon, NInputNumber, NTag, NText, type DataTableColumns } from "naive-ui"
+import { NButton, NFlex, NIcon, NInputNumber, NTag, NText, NTooltip, type DataTableColumns } from "naive-ui"
 import { Add, Remove } from "@vicons/ionicons5"
 import type { SuggestionLine } from "../../../infrastructure/apiTypes"
 import { es } from "../../../i18n/es"
@@ -103,7 +103,12 @@ const columns: DataTableColumns<SuggestionLine> = [
   { key: "base", title: es.orderReview.table.base, align: "right", width: 70, render: (line) => units(line.stockPosition?.base ?? null) },
   {
     key: "reorderPoint",
-    title: es.orderReview.table.reorderPoint,
+    // «PD» con el nombre completo al pasar el mouse.
+    title: () =>
+      h(NTooltip, null, {
+        trigger: () => h("span", { style: { cursor: "help", textDecoration: "underline dotted" } }, es.orderReview.table.reorderPoint),
+        default: () => es.orderReview.table.reorderPointFull,
+      }),
     align: "right",
     width: 70,
     render: (line) => units(line.stockPosition?.reorderPoint ?? null),
@@ -143,21 +148,17 @@ const columns: DataTableColumns<SuggestionLine> = [
 </script>
 
 <template>
-  <n-flex vertical :size="8">
-    <!-- Nota de la sigla PD -->
-    <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.orderReview.table.reorderPointNote }}</n-text>
-    <n-data-table
-      :columns="columns"
-      :data="lines"
-      :pagination="pagination"
-      :row-key="(line: SuggestionLine) => line.productId"
-      :scroll-x="1070"
-      :bordered="true"
-      size="small"
-    >
-      <template #empty>
-        <n-empty :description="es.orderReview.table.empty" />
-      </template>
-    </n-data-table>
-  </n-flex>
+  <n-data-table
+    :columns="columns"
+    :data="lines"
+    :pagination="pagination"
+    :row-key="(line: SuggestionLine) => line.productId"
+    :scroll-x="1070"
+    :bordered="true"
+    size="small"
+  >
+    <template #empty>
+      <n-empty :description="es.orderReview.table.empty" />
+    </template>
+  </n-data-table>
 </template>
