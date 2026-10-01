@@ -41,10 +41,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("./presentation/views/ProductsView.vue"),
       },
       {
-        path: "historial",
+        path: "pedidos",
         name: "history",
         component: () => import("./presentation/views/HistoryView.vue"),
       },
+      // Dirección anterior de la vista de pedidos.
+      { path: "historial", redirect: "/pedidos" },
       {
         path: "calidad",
         name: "data-quality",

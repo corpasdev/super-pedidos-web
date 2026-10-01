@@ -20,7 +20,7 @@ export const es = {
     home: "Inicio",
     orderWizard: "Sugeridos",
     products: "Productos",
-    history: "Historial",
+    history: "Pedidos",
     dataQuality: "Calidad de datos",
     settings: "Configuración",
     suppliers: "Proveedores",
@@ -605,7 +605,7 @@ export const es = {
     actionsHint: "Auto-guarda al cambiar un número.",
   },
   history: {
-    title: "Historial de pedidos",
+    title: "Pedidos",
     subtitle: "Todos los pedidos que confirmaste, de más reciente a más antiguo.",
     empty: "Todavía no hay pedidos confirmados.",
     loading: "Cargando pedidos…",

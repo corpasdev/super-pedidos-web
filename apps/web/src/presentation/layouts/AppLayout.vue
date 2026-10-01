@@ -15,7 +15,6 @@ import {
   SearchOutline,
   SettingsOutline,
   SunnyOutline,
-  TimeOutline,
   WarningOutline,
 } from "@vicons/ionicons5"
 import { useSessionStore } from "../../stores/sessionStore"
@@ -46,9 +45,9 @@ interface NavItem {
 const allNavItems: NavItem[] = [
   { key: "home", to: "/inicio", label: es.nav.home, icon: GridOutline, visible: false },
   { key: "order-wizard", to: "/pedido", label: es.nav.orderWizard, icon: CartOutline, visible: true },
+  { key: "history", to: "/pedidos", label: es.nav.history, icon: ReceiptOutline, visible: true },
   { key: "suppliers", to: "/proveedores", label: es.nav.suppliers, icon: PeopleOutline, visible: true },
   { key: "products", to: "/productos", label: es.nav.products, icon: CubeOutline, visible: true },
-  { key: "history", to: "/historial", label: es.nav.history, icon: TimeOutline, visible: false },
   { key: "data-quality", to: "/calidad", label: es.nav.dataQuality, icon: WarningOutline, visible: false },
   { key: "settings", to: "/configuracion", label: es.nav.settings, icon: SettingsOutline, visible: true },
 ]
@@ -57,7 +56,7 @@ const allNavItems: NavItem[] = [
 const navItems = allNavItems.filter((item) => item.visible)
 
 /** Botones del encabezado que llevan a secciones ocultas (Calidad, Productos, Historial). */
-const showSecondaryShortcuts = allNavItems.some((item) => item.key === "history" && item.visible)
+const showSecondaryShortcuts = false
 
 const tone = computed(() => (themeStore.mode === "dark" ? palette.dark : palette.light))
 const activeKey = computed(
@@ -305,7 +304,7 @@ watch(
                 <n-button circle :color="tone.ink" :text-color="tone.surface" :aria-label="es.shell.searchProducts" @click="router.push('/productos')">
                   <template #icon><n-icon :component="SearchOutline" /></template>
                 </n-button>
-                <n-button circle :color="tone.ink" :text-color="tone.surface" :aria-label="es.shell.history" @click="router.push('/historial')">
+                <n-button circle :color="tone.ink" :text-color="tone.surface" :aria-label="es.shell.history" @click="router.push('/pedidos')">
                   <template #icon><n-icon :component="ReceiptOutline" /></template>
                 </n-button>
               </template>

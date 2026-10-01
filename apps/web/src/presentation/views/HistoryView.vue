@@ -180,10 +180,7 @@ const orderRowProps = (order: OrderListItem) => ({
 
 <template>
   <n-flex vertical :size="20">
-    <n-flex vertical :size="2">
-      <n-text :style="{ fontSize: '20px', fontWeight: 500 }">{{ es.history.title }}</n-text>
-      <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.history.subtitle }}</n-text>
-    </n-flex>
+    <n-text :style="{ fontSize: '20px', fontWeight: 500 }">{{ es.history.title }}</n-text>
 
     <n-alert v-if="history.error !== null" type="error" :bordered="false">{{ history.error }}</n-alert>
 
