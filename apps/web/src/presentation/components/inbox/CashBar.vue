@@ -13,7 +13,8 @@ import { moneyInputProps } from "../../numericInput"
  * El lápiz convierte ese mismo número en campo editable, sin bordes ni botón de guardar:
  * Enter o salir del campo guarda; Esc cancela.
  */
-const props = defineProps<{ cash: DailyCashItem | null; saving?: boolean }>()
+/** `planned`: lo que el agente ya repartió de la caja en los sugeridos pendientes; `plannedOrders`: en cuántos pedidos. */
+const props = defineProps<{ cash: DailyCashItem | null; saving?: boolean; planned?: number; plannedOrders?: number }>()
 const emit = defineEmits<{ open: [amount: number] }>()
 
 const input = ref<InputNumberInst | null>(null)
@@ -21,9 +22,12 @@ const draft = ref<number | null>(null)
 const editing = ref(false)
 const hasCash = computed(() => props.cash !== null && props.cash.openingAmount !== null)
 const shownAmount = computed(() => (hasCash.value ? (props.cash!.remainingAmount ?? 0) : 0))
-const spentPercent = computed(() =>
-  !hasCash.value || !props.cash!.openingAmount ? 0 : Math.min(100, (props.cash!.spentAmount / props.cash!.openingAmount) * 100),
-)
+// Reparto de la caja: lo ya pedido hoy, lo que tienen asignado los sugeridos y lo que queda libre.
+const opening = computed(() => (hasCash.value ? props.cash!.openingAmount! : 0))
+const spent = computed(() => (hasCash.value ? props.cash!.spentAmount : 0))
+const planned = computed(() => Math.min(props.planned ?? 0, Math.max(0, opening.value - spent.value)))
+const free = computed(() => Math.max(0, opening.value - spent.value - planned.value))
+const percentOf = (value: number): string => (opening.value > 0 ? `${Math.min(100, (value / opening.value) * 100)}%` : "0%")
 /** Al corregir por debajo de lo ya pedido hoy, la caja queda en $0: se avisa mientras se escribe. */
 const belowSpent = computed(() => draft.value !== null && props.cash !== null && draft.value < props.cash.spentAmount)
 
@@ -65,6 +69,17 @@ function onKeyup(event: KeyboardEvent): void {
 }
 
 const light = "#FDFDFD"
+const legendStyle = { color: light, opacity: 0.85, fontSize: "12px", whiteSpace: "nowrap" as const }
+const dot = (opacity: number) => ({
+  display: "inline-block",
+  width: "8px",
+  height: "8px",
+  borderRadius: "999px",
+  background: palette.accent,
+  opacity,
+  marginRight: "5px",
+})
+
 /** Rótulo «CAJA HOY» arriba del número. */
 const labelStyle = { color: light, opacity: 0.8, fontSize: "12px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase" as const }
 /** El campo se ve igual que el número: sin fondo ni borde, mismo tamaño y color. */
@@ -125,7 +140,24 @@ const bareInput = {
         {{ belowSpent ? es.inbox.cashBelowSpent(formatMoney(cash!.spentAmount)) : es.inbox.cashEditHint }}
       </n-text>
       <n-flex v-else-if="hasCash" vertical :size="6">
-        <n-progress type="line" :percentage="spentPercent" :show-indicator="false" :height="8" :color="palette.accent" rail-color="rgba(253,253,253,0.18)" />
+        <!-- Barra del reparto: pedido hoy (lima) · en sugeridos (lima suave) · libre (riel) -->
+        <div
+          role="img"
+          :aria-label="es.inbox.cashSplitLabel(formatMoney(spent), formatMoney(planned), formatMoney(free))"
+          :style="{ display: 'flex', height: '8px', borderRadius: '999px', overflow: 'hidden', background: 'rgba(253,253,253,0.18)' }"
+        >
+          <span :style="{ width: percentOf(spent), background: palette.accent, transition: 'width .3s' }" />
+          <span :style="{ width: percentOf(planned), background: palette.accent, opacity: 0.45, transition: 'width .3s' }" />
+        </div>
+        <n-flex :size="10" :wrap="true" :style="{ rowGap: '2px' }">
+          <n-text v-if="spent > 0" class="tabular-nums" :style="legendStyle">
+            <span :style="dot(1)" />{{ es.inbox.cashSpentShort(formatMoney(spent)) }}
+          </n-text>
+          <n-text class="tabular-nums" :style="legendStyle">
+            <span :style="dot(0.45)" />{{ es.inbox.cashPlanned(formatMoney(planned), plannedOrders ?? 0) }}
+          </n-text>
+          <n-text class="tabular-nums" :style="legendStyle">{{ es.inbox.cashFree(formatMoney(free)) }}</n-text>
+        </n-flex>
       </n-flex>
       <n-text v-else :style="{ color: light, opacity: 0.85, fontSize: '12px' }">{{ es.inbox.cashMissingShort }}</n-text>
     </n-flex>

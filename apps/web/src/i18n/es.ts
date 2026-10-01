@@ -85,6 +85,11 @@ export const es = {
     reload: "Actualizar",
     cashShort: "Caja",
     cashToday: "Caja hoy",
+    cashSpentShort: (amount: string): string => `Pedido ${amount}`,
+    cashPlanned: (amount: string, orders: number): string => `Sugeridos ${amount} en ${orders} pedido${orders === 1 ? "" : "s"}`,
+    cashFree: (amount: string): string => `Libre ${amount}`,
+    cashSplitLabel: (spent: string, planned: string, free: string): string =>
+      `Caja de hoy: pedido ${spent}, en sugeridos ${planned}, libre ${free}`,
     cashEdit: "Corregir el efectivo de la caja",
     cashCancel: "Cancelar",
     cashEditHint: "Enter para guardar · Esc para cancelar",

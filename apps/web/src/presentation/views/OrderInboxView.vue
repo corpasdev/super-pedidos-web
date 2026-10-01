@@ -44,6 +44,12 @@ const canOpen = (vendor: InboxVendorItem): boolean => vendor.orderToday === null
 const hasSomethingToOrder = (vendor: InboxVendorItem): boolean => canOpen(vendor) && (vendor.ready?.productCount ?? 0) > 0
 
 
+/** Cuánto de la caja dejó repartido el agente en los sugeridos que faltan por confirmar. */
+const plannedCash = computed(() => {
+  const ready = vendors.value.filter((vendor) => vendor.orderToday === null && (vendor.ready?.totalCost ?? 0) > 0)
+  return { total: ready.reduce((sum, vendor) => sum + (vendor.ready?.totalCost ?? 0), 0), orders: ready.length }
+})
+
 /** Solo el día de la visita se confirma; los otros días el sugerido se puede revisar. */
 const isSelectedToday = computed(() => inbox.inbox === null || inbox.inbox.day === inbox.inbox.today)
 
@@ -140,7 +146,13 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
   <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
     <!-- Caja (lo que más limita el pedido) -->
     <div class="lg:col-start-1">
-      <CashBar :cash="inbox.inbox?.cash ?? null" :saving="wizard.dailyCashLoading" @open="openCash" />
+      <CashBar
+        :cash="inbox.inbox?.cash ?? null"
+        :saving="wizard.dailyCashLoading"
+        :planned="plannedCash.total"
+        :planned-orders="plannedCash.orders"
+        @open="openCash"
+      />
     </div>
 
     <!-- Receptor del Excel de ventas -->
