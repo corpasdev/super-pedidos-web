@@ -19,6 +19,29 @@ export const arrivalsDueOn = (day: string) => (orders: readonly InboxOrder[]): r
 export const orderOfSupplierOn = (day: string) => (supplierId: string) => (orders: readonly InboxOrder[]): InboxOrder | null =>
   orders.find((order) => order.supplierId === supplierId && order.orderDay === day) ?? null
 
+/** Factura (pedido) que todavía tiene saldo por pagar. */
+export interface PendingInvoice {
+  readonly orderId: string
+  /** YYYY-MM-DD del pedido. */
+  readonly orderDay: string
+  readonly totalCost: number
+  readonly pendingAmount: number
+}
+
+/** Facturas con saldo de cada distribuidor, de la más vieja a la más reciente. */
+export const pendingInvoicesBySupplier = (orders: readonly InboxOrder[]): ReadonlyMap<string, readonly PendingInvoice[]> =>
+  [...orders]
+    .filter((order) => order.pendingAmount > 0)
+    .sort((left, right) => left.orderDay.localeCompare(right.orderDay))
+    .reduce(
+      (bySupplier, order) =>
+        bySupplier.set(order.supplierId, [
+          ...(bySupplier.get(order.supplierId) ?? []),
+          { orderId: order.id, orderDay: order.orderDay, totalCost: order.totalCost, pendingAmount: order.pendingAmount },
+        ]),
+      new Map<string, PendingInvoice[]>(),
+    )
+
 /** Lo que se le debe a cada distribuidor: Σ pendiente por pagar de sus pedidos. */
 export const debtsBySupplier = (orders: readonly InboxOrder[]): ReadonlyMap<string, number> =>
   orders

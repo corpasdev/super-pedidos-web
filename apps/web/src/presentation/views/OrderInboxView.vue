@@ -176,9 +176,18 @@ const tileTitleStyle = { fontSize: "12px", fontWeight: 700, letterSpacing: "0.06
       <n-card :bordered="false" :content-style="{ padding: '14px 16px' }">
         <n-flex vertical :size="8">
           <n-text :style="tileTitleStyle">{{ es.inbox.owed }}</n-text>
-          <n-flex v-for="debt in debts" :key="debt.supplierId" justify="space-between" :size="8" :wrap="false">
-            <n-ellipsis>{{ debt.supplierName }}</n-ellipsis>
-            <n-text class="tabular-nums" :style="{ fontWeight: 700, whiteSpace: 'nowrap' }">{{ formatMoney(debt.amount) }}</n-text>
+          <!-- Por proveedor: total que se le debe y, debajo, cada factura con su fecha y saldo -->
+          <n-flex v-for="debt in debts" :key="debt.supplierId" vertical :size="2">
+            <n-flex justify="space-between" :size="8" :wrap="false">
+              <n-ellipsis :style="{ fontWeight: 600 }">{{ debt.supplierName }}</n-ellipsis>
+              <n-text class="tabular-nums" :style="{ fontWeight: 700, whiteSpace: 'nowrap' }">{{ formatMoney(debt.amount) }}</n-text>
+            </n-flex>
+            <n-flex v-for="invoice in debt.invoices" :key="invoice.orderId" justify="space-between" :size="8" :wrap="false">
+              <n-text depth="3" :style="{ fontSize: '12px' }">{{ es.inbox.invoiceOf(formatDay(invoice.orderDay), formatMoney(invoice.totalCost)) }}</n-text>
+              <n-text depth="3" class="tabular-nums" :style="{ fontSize: '12px', whiteSpace: 'nowrap' }">
+                {{ es.inbox.invoiceBalance(formatMoney(invoice.pendingAmount)) }}
+              </n-text>
+            </n-flex>
           </n-flex>
           <n-text v-if="debts.length === 0" depth="3">—</n-text>
         </n-flex>

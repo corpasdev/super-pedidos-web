@@ -324,6 +324,8 @@ export interface InboxDebtItem {
   supplierId: string
   supplierName: string
   amount: number
+  /** Facturas con saldo (orderDay = YYYY-MM-DD del pedido), de la más vieja a la más reciente. */
+  invoices: { orderId: string; orderDay: string; totalCost: number; pendingAmount: number }[]
 }
 
 /** Un día de los próximos, con cuántos proveedores vienen (tags de la bandeja). */

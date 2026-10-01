@@ -4,12 +4,14 @@ import {
   arrivalsDueOn,
   isoWeekdayOfDay,
   debtsBySupplier,
+  pendingInvoicesBySupplier,
   deliversSameDay,
   expectedDeliveryDay,
   orderOfSupplierOn,
   visitsOnDay,
   type BudgetTier,
   type InboxOrder,
+  type PendingInvoice,
   type SellerVisit,
 } from "@agente-pedidos/order-agent"
 
@@ -63,6 +65,8 @@ export interface InboxDebt {
   supplierId: string
   supplierName: string
   amount: number
+  /** Facturas con saldo, de la más vieja a la más reciente. */
+  invoices: PendingInvoice[]
 }
 
 /** Un día de los próximos: cuántos proveedores vienen (para los tags de la bandeja). */
@@ -167,8 +171,9 @@ export class InboxService {
       expectedDeliveryDay: order.expectedDeliveryDay!,
     }))
 
+    const invoices = pendingInvoicesBySupplier(orders)
     const debts = [...debtsBySupplier(orders).entries()]
-      .map(([supplierId, amount]) => ({ supplierId, supplierName: nameOf(supplierId), amount }))
+      .map(([supplierId, amount]) => ({ supplierId, supplierName: nameOf(supplierId), amount, invoices: [...(invoices.get(supplierId) ?? [])] }))
       .sort((left, right) => right.amount - left.amount)
 
     return {

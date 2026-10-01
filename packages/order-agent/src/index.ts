@@ -187,5 +187,5 @@ export {
   expectedDeliveryDay,
 } from "./inbox/visits.js"
 export type { SellerVisit, VisitFrequencyValue } from "./inbox/visits.js"
-export { arrivalsDueOn, orderOfSupplierOn, debtsBySupplier } from "./inbox/ledger.js"
-export type { InboxOrder } from "./inbox/ledger.js"
+export { arrivalsDueOn, orderOfSupplierOn, debtsBySupplier, pendingInvoicesBySupplier } from "./inbox/ledger.js"
+export type { InboxOrder, PendingInvoice } from "./inbox/ledger.js"

@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "mock:ventas": "tsx src/scripts/ventasMock.ts"
+    "mock:ventas": "tsx src/scripts/ventasMock.ts",
+    "mock:deudas": "tsx src/scripts/deudasMock.ts"
   },
   "dependencies": {
     "@agente-pedidos/database-types": "0.1.0",

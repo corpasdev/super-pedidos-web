@@ -7,7 +7,7 @@ import {
   visitsOnDay,
   type SellerVisit,
 } from "../src/inbox/visits.js"
-import { arrivalsDueOn, debtsBySupplier, orderOfSupplierOn, type InboxOrder } from "../src/inbox/ledger.js"
+import { arrivalsDueOn, debtsBySupplier, orderOfSupplierOn, pendingInvoicesBySupplier, type InboxOrder } from "../src/inbox/ledger.js"
 
 const visit = (overrides: Partial<SellerVisit> = {}): SellerVisit => ({
   id: "v",
@@ -67,6 +67,18 @@ describe("bandeja: llegadas y deudas", () => {
   it("pedido ya hecho hoy a un proveedor", () => {
     expect(orderOfSupplierOn("2026-09-24")("s")([order()])?.id).toBe("o")
     expect(orderOfSupplierOn("2026-09-25")("s")([order()])).toBeNull()
+  })
+
+  it("facturas con saldo por distribuidor, de la más vieja a la más reciente", () => {
+    const invoices = pendingInvoicesBySupplier([
+      order({ id: "nueva", supplierId: "a", orderDay: "2026-09-28", totalCost: 90_000, pendingAmount: 40_000 }),
+      order({ id: "vieja", supplierId: "a", orderDay: "2026-09-21", totalCost: 120_000, pendingAmount: 120_000 }),
+      order({ id: "pagada", supplierId: "a", orderDay: "2026-09-14", pendingAmount: 0 }),
+    ])
+    expect(invoices.get("a")?.map((invoice) => [invoice.orderId, invoice.pendingAmount])).toEqual([
+      ["vieja", 120_000],
+      ["nueva", 40_000],
+    ])
   })
 
   it("deuda por distribuidor", () => {
